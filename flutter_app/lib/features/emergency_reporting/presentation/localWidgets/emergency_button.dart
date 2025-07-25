@@ -31,7 +31,7 @@ class EmergencyButton extends StatelessWidget {
             color: AppColors.emergency,
             boxShadow: [
               BoxShadow(
-                color: AppColors.emergency.withOpacity(0.3),
+                color: AppColors.emergency.withValues(alpha: 0.3),
                 blurRadius: screenWidth * 0.04,
                 spreadRadius: screenWidth * 0.008,
               ),

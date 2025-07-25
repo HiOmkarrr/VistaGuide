@@ -67,20 +67,20 @@ class EmergencyService {
     // 3. Notify emergency contacts
     // 4. Log the emergency event
 
-    print('Emergency alert triggered!');
-    // TODO: Implement actual emergency handling logic
+    // In a real implementation, this would trigger emergency protocols
+    // For now, this is a placeholder for emergency handling logic
   }
 
   /// Call an emergency contact
   Future<void> callEmergencyContact(String contactId) async {
-    final contact = _emergencyContacts.firstWhere(
+    // Validate that the contact exists
+    _emergencyContacts.firstWhere(
       (c) => c.id == contactId,
       orElse: () => throw Exception('Contact not found'),
     );
 
     // In a real implementation, this would use url_launcher to make a phone call
-    print('Calling ${contact.name} at ${contact.phoneNumber}');
-    // TODO: Implement actual phone call functionality
+    // For now, this is a placeholder for phone call functionality
   }
 
   /// Get emergency information text

@@ -107,14 +107,12 @@ class HomeService {
   /// Handle search action
   void handleSearch(String query) {
     // In a real implementation, this would handle search functionality
-    print('Searching for: $query');
-    // TODO: Implement search functionality
+    // For now, this is a placeholder for search functionality
   }
 
   /// Handle settings navigation
   void navigateToSettings() {
     // In a real implementation, this would navigate to settings
-    print('Navigating to settings');
-    // TODO: Implement settings navigation
+    // For now, this is a placeholder for settings navigation
   }
 }

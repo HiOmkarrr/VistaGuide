@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_colors.dart';
 import '../models/user_profile.dart';
 import '../models/settings_item.dart';
 
@@ -84,39 +83,34 @@ class ProfileService {
   /// Handle view profile action
   void handleViewProfile() {
     // In a real implementation, this would navigate to profile details
-    print('Navigating to profile details');
-    // TODO: Implement profile details navigation
+    // For now, this is a placeholder for future navigation implementation
   }
 
   /// Handle settings item tap
   void handleSettingsItemTap(String itemId) {
+    // In a real implementation, these would navigate to respective pages
     switch (itemId) {
       case 'personal_info':
-        print('Navigating to personal information');
-        // TODO: Navigate to personal information page
+        // Navigate to personal information page
         break;
       case 'contact_info':
-        print('Navigating to contact information');
-        // TODO: Navigate to contact information page
+        // Navigate to contact information page
         break;
       case 'preferences':
-        print('Navigating to preferences');
-        // TODO: Navigate to preferences page
+        // Navigate to preferences page
         break;
       case 'language':
-        print('Navigating to language settings');
-        // TODO: Navigate to language settings page
+        // Navigate to language settings page
         break;
       case 'notifications':
-        print('Navigating to notification settings');
-        // TODO: Navigate to notification settings page
+        // Navigate to notification settings page
         break;
       case 'privacy':
-        print('Navigating to privacy settings');
-        // TODO: Navigate to privacy settings page
+        // Navigate to privacy settings page
         break;
       default:
-        print('Unknown settings item: $itemId');
+        // Handle unknown settings item
+        break;
     }
   }
 

@@ -41,7 +41,7 @@ class EventsList extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            const Icon(
               Icons.event_busy,
               size: 64,
               color: AppColors.grey400,

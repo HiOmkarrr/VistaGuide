@@ -66,7 +66,7 @@ class EmergencyContactsList extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Icon(
+          const Icon(
             Icons.person_add_outlined,
             size: 48,
             color: AppColors.grey400,

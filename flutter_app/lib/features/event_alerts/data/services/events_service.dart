@@ -10,7 +10,7 @@ class EventsService {
 
   // Mock data - in a real app, this would come from a database or API
   final List<Event> _events = [
-    Event(
+    const Event(
       id: '1',
       title: 'Summer Music Festival',
       date: 'July 15, 2024 • 7:00 PM',
@@ -21,7 +21,7 @@ class EventsService {
       icon: Icons.music_note,
       location: 'Central Park',
     ),
-    Event(
+    const Event(
       id: '2',
       title: 'Art Exhibition',
       date: 'July 20, 2024 • 6:00 PM',
@@ -32,7 +32,7 @@ class EventsService {
       icon: Icons.palette,
       location: 'Modern Art Gallery',
     ),
-    Event(
+    const Event(
       id: '3',
       title: 'Local Food Festival',
       date: 'July 25, 2024 • 5:00 PM',
@@ -43,7 +43,7 @@ class EventsService {
       icon: Icons.restaurant,
       location: 'Downtown Square',
     ),
-    Event(
+    const Event(
       id: '4',
       title: 'Outdoor Cinema',
       date: 'August 5, 2024 • 8:00 PM',
@@ -108,7 +108,6 @@ class EventsService {
   /// Navigate to event details
   void navigateToEventDetails(String eventId) {
     // In a real implementation, this would navigate to event details page
-    print('Navigating to event details for event: $eventId');
-    // TODO: Implement navigation to event details
+    // For now, this is a placeholder for navigation functionality
   }
 }

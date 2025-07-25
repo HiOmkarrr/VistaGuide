@@ -35,8 +35,7 @@ class HomePage extends StatelessWidget {
                     RecommendedDestinations(
                       destinations: destinations,
                       onDestinationTap: (destinationId) {
-                        // Handle destination tap
-                        print('Tapped destination: $destinationId');
+                        // Handle destination tap - placeholder for navigation
                       },
                     ),
                     QuickAccessGrid(

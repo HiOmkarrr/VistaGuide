@@ -56,8 +56,7 @@ class LandmarkRecognitionService {
   /// Handle image source selection
   Future<void> showImageSourceDialog() async {
     // In a real implementation, this would show a dialog to choose between camera and gallery
-    print('Showing image source dialog');
-    // TODO: Implement image picker functionality
+    // For now, this is a placeholder for image picker functionality
   }
 
   /// Process image for landmark recognition
@@ -68,8 +67,8 @@ class LandmarkRecognitionService {
     // 3. Save to recent recognitions
     // 4. Return recognition result
 
-    print('Processing image: $imagePath');
-    // TODO: Implement actual landmark recognition
+    // In a real implementation, this would process the image for landmark recognition
+    // For now, this is a placeholder for ML processing functionality
     return null;
   }
 
@@ -101,8 +100,8 @@ class LandmarkRecognitionService {
   void handleRecognitionTap(String recognitionId) {
     final recognition = getRecognitionById(recognitionId);
     if (recognition != null) {
-      print('Tapped recognition: ${recognition.landmarkName}');
-      // TODO: Navigate to recognition details or show more info
+      // In a real implementation, this would navigate to recognition details
+      // For now, this is a placeholder for navigation functionality
     }
   }
 }
