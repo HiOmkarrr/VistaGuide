@@ -1,6 +1,6 @@
 # pubspec.yaml
 
-name: vistaguide
+name: vista_guide
 description: "AI Travel Companion for Exploration and Insights."
 publish_to: 'none'
 version: 1.0.0+1

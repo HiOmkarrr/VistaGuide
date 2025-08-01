@@ -7,7 +7,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:vistaguide/main.dart';
+import 'package:vista_guide/main.dart';
 
 void main() {
   testWidgets('App starts and shows home page', (WidgetTester tester) async {

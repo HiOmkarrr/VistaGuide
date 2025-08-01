@@ -25,6 +25,7 @@ class DestinationCard extends StatelessWidget {
 
     return Container(
       width: cardWidth,
+      height: cardHeight,
       margin: EdgeInsets.only(right: screenWidth * 0.04),
       child: Card(
         child: InkWell(
@@ -33,8 +34,12 @@ class DestinationCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildImage(imageHeight, iconSize),
               Expanded(
+                flex: 3,
+                child: _buildImage(imageHeight, iconSize),
+              ),
+              Expanded(
+                flex: 2,
                 child: _buildContent(screenWidth, cardHeight),
               ),
             ],
@@ -46,7 +51,6 @@ class DestinationCard extends StatelessWidget {
 
   Widget _buildImage(double imageHeight, double iconSize) {
     return Container(
-      height: imageHeight,
       decoration: const BoxDecoration(
         color: AppColors.grey200,
         borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
@@ -101,20 +105,24 @@ class DestinationCard extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          Text(
-            destination.title,
-            style: AppTextStyles.h4.copyWith(
-              fontSize: screenWidth * 0.045,
+          Flexible(
+            child: Text(
+              destination.title,
+              style: AppTextStyles.h4.copyWith(
+                fontSize: screenWidth * 0.04,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
-          SizedBox(height: cardHeight * 0.02),
+          const SizedBox(height: 4),
           Flexible(
             child: Text(
               destination.subtitle,
               style: AppTextStyles.bodySmall.copyWith(
-                fontSize: screenWidth * 0.032,
+                fontSize: screenWidth * 0.03,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
