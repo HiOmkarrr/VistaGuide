@@ -89,7 +89,7 @@ class _SplashScreenState extends State<SplashScreen>
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // App Logo/Icon placeholder
+                    // App Logo
                     Container(
                       width: 120,
                       height: 120,
@@ -98,16 +98,49 @@ class _SplashScreenState extends State<SplashScreen>
                         borderRadius: BorderRadius.circular(60),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 20,
+                            color: Colors.black.withValues(alpha: 0.2),
+                            blurRadius: 25,
                             offset: const Offset(0, 10),
                           ),
                         ],
                       ),
-                      child: const Icon(
-                        Icons.explore,
-                        size: 60,
-                        color: AppColors.primary,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(60),
+                        child: Image.asset(
+                          'assets/images/vistaguide_logo.png',
+                          width: 120,
+                          height: 120,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            // Fallback to custom VG logo if image fails to load
+                            return Container(
+                              width: 120,
+                              height: 120,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    AppColors.primary,
+                                    AppColors.primary.withValues(alpha: 0.8),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(60),
+                              ),
+                              child: const Center(
+                                child: Text(
+                                  'VG',
+                                  style: TextStyle(
+                                    fontSize: 36,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                    letterSpacing: 2,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
                     const SizedBox(height: 30),

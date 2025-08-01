@@ -1,12 +1,18 @@
 /// Route constants for the VistaGuide app
 class AppRoutes {
+  // Authentication routes
+  static const String splash = '/splash';
+  static const String login = '/login';
+  static const String register = '/register';
+  static const String forgotPassword = '/forgot-password';
+
   // Main navigation routes
   static const String home = '/';
   static const String landmarkRecognition = '/landmark-recognition';
   static const String emergency = '/emergency';
   static const String events = '/events';
   static const String profile = '/profile';
-  
+
   // Sub-routes
   static const String landmarkDetails = '/landmark-recognition/details';
   static const String emergencyContacts = '/emergency/contacts';

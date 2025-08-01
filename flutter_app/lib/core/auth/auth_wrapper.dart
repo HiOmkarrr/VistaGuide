@@ -31,7 +31,7 @@ class AuthWrapper extends StatelessWidget {
         final User? user = snapshot.data;
 
         // Auth routes that don't require authentication
-        const authRoutes = [
+        final authRoutes = [
           AppRoutes.splash,
           AppRoutes.login,
           AppRoutes.register,

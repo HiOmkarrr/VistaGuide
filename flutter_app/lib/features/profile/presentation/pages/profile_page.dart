@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../shared/widgets/bottom_navigation_bar.dart';
 import '../../../../shared/widgets/custom_app_bar.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -12,47 +13,52 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final profileService = ProfileService();
-    final userProfile = profileService.getUserProfile();
-    final accountSettings = profileService.getAccountSettings();
-    final appSettings = profileService.getAppSettings();
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        final profileService = ProfileService();
+        final userProfile = profileService.getUserProfile();
+        final accountSettings = profileService.getAccountSettings();
+        final appSettings = profileService.getAppSettings();
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: const CustomAppBar(
-        title: 'Settings',
-        showBackButton: false,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              ProfileHeader(
-                userProfile: userProfile,
-                avatarColor: profileService.getProfileAvatarColor(),
-                hasProfileImage: profileService.hasProfileImage(),
-                onViewProfileTap: () => profileService.handleViewProfile(),
-              ),
-              const SizedBox(height: 24),
-              SettingsSection(
-                title: profileService.getAccountSectionTitle(),
-                items: accountSettings,
-                onItemTap: (itemId) =>
-                    profileService.handleSettingsItemTap(itemId),
-              ),
-              const SizedBox(height: 24),
-              SettingsSection(
-                title: profileService.getAppSettingsSectionTitle(),
-                items: appSettings,
-                onItemTap: (itemId) =>
-                    profileService.handleSettingsItemTap(itemId),
-              ),
-              const SizedBox(height: 24),
-            ],
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          appBar: const CustomAppBar(
+            title: 'Settings',
+            showBackButton: false,
           ),
-        ),
-      ),
-      bottomNavigationBar: const CustomBottomNavigationBar(currentIndex: 4),
+          body: SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  ProfileHeader(
+                    userProfile: userProfile,
+                    avatarColor: profileService.getProfileAvatarColor(),
+                    hasProfileImage: profileService.hasProfileImage(),
+                    onViewProfileTap: () => profileService.handleViewProfile(),
+                  ),
+                  const SizedBox(height: 24),
+                  SettingsSection(
+                    title: profileService.getAccountSectionTitle(),
+                    items: accountSettings,
+                    onItemTap: (itemId) async => await profileService
+                        .handleSettingsItemTap(itemId, context),
+                  ),
+                  const SizedBox(height: 24),
+                  SettingsSection(
+                    title: profileService.getAppSettingsSectionTitle(),
+                    items: appSettings,
+                    onItemTap: (itemId) async => await profileService
+                        .handleSettingsItemTap(itemId, context),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+          bottomNavigationBar: const CustomBottomNavigationBar(currentIndex: 4),
+        );
+      },
     );
   }
 }

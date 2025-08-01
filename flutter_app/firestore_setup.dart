@@ -11,11 +11,11 @@ void main() async {
 
   final firestore = FirebaseFirestore.instance;
 
-  print('Setting up Firestore collections...');
+  // print('Setting up Firestore collections...');
 
   try {
     // 1. Create users collection with a placeholder document
-    print('Creating users collection...');
+    // print('Creating users collection...');
     await firestore.collection('users').doc('_placeholder').set({
       'placeholder': true,
       'createdAt': FieldValue.serverTimestamp(),
@@ -23,7 +23,7 @@ void main() async {
     });
 
     // 2. Create destinations collection with sample data
-    print('Creating destinations collection...');
+    // print('Creating destinations collection...');
     final destinationsRef = firestore.collection('destinations');
     
     final sampleDestination = {
@@ -45,7 +45,7 @@ void main() async {
     await destinationsRef.add(sampleDestination);
 
     // 3. Create userData collection with placeholder
-    print('Creating userData collection...');
+    // print('Creating userData collection...');
     await firestore.collection('userData').doc('_placeholder').set({
       'placeholder': true,
       'createdAt': FieldValue.serverTimestamp(),
@@ -53,21 +53,21 @@ void main() async {
     });
 
     // 4. Create travel_plans collection
-    print('Creating travel_plans collection...');
+    // print('Creating travel_plans collection...');
     await firestore.collection('travel_plans').doc('_placeholder').set({
       'placeholder': true,
       'createdAt': FieldValue.serverTimestamp(),
       'description': 'Placeholder for user travel plans'
     });
 
-    print('✅ Successfully created all Firestore collections!');
-    print('Collections created:');
-    print('  - users');
-    print('  - destinations');
-    print('  - userData');
-    print('  - travel_plans');
+    // print('✅ Successfully created all Firestore collections!');
+    // print('Collections created:');
+    // print('  - users');
+    // print('  - destinations');
+    // print('  - userData');
+    // print('  - travel_plans');
     
   } catch (e) {
-    print('❌ Error setting up Firestore collections: $e');
+    // print('❌ Error setting up Firestore collections: $e');
   }
 }

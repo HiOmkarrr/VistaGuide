@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:go_router/go_router.dart';
 import '../models/user_profile.dart';
 import '../models/settings_item.dart';
+import '../../../../core/navigation/app_routes.dart';
 
 /// Service to manage profile data and functionality
 class ProfileService {
@@ -8,17 +11,11 @@ class ProfileService {
   factory ProfileService() => _instance;
   ProfileService._internal();
 
-  // Mock user profile data
-  UserProfile _userProfile = UserProfile(
-    id: '1',
-    name: 'Sophia Clark',
-    email: 'sophia.clark@email.com',
-    phoneNumber: '+1-555-0123',
-    location: 'New York, USA',
-    preferences: ['Travel', 'Photography', 'Culture'],
-    createdAt: DateTime.now().subtract(const Duration(days: 365)),
-    updatedAt: DateTime.now(),
-  );
+  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+
+  // Cache for user profile to avoid repeated Firebase calls
+  UserProfile? _cachedUserProfile;
+  String? _cachedUserId;
 
   // Account settings items
   final List<SettingsItem> _accountSettings = [
@@ -56,18 +53,72 @@ class ProfileService {
       title: 'Privacy Settings',
       icon: Icons.security_outlined,
     ),
+    const SettingsItem(
+      id: 'sign_out',
+      title: 'Sign Out',
+      icon: Icons.logout_outlined,
+    ),
   ];
 
   /// Get current user profile
   UserProfile getUserProfile() {
-    return _userProfile;
+    final currentUser = _firebaseAuth.currentUser;
+
+    if (currentUser != null) {
+      // Check if we have a cached profile for the current user
+      if (_cachedUserProfile != null && _cachedUserId == currentUser.uid) {
+        return _cachedUserProfile!;
+      }
+
+      // Create user profile from Firebase Auth data
+      final userProfile = UserProfile(
+        id: currentUser.uid,
+        name: currentUser.displayName ?? 'User',
+        email: currentUser.email ?? '',
+        phoneNumber: currentUser.phoneNumber ?? '',
+        location: 'Location not set',
+        preferences: const ['Travel', 'Photography', 'Culture'],
+        createdAt: currentUser.metadata.creationTime ?? DateTime.now(),
+        updatedAt: DateTime.now(),
+        profileImageUrl: currentUser.photoURL,
+      );
+
+      // Cache the profile
+      _cachedUserProfile = userProfile;
+      _cachedUserId = currentUser.uid;
+
+      return userProfile;
+    }
+
+    // Fallback if no user is authenticated
+    return UserProfile(
+      id: 'guest',
+      name: 'Guest User',
+      email: '',
+      phoneNumber: '',
+      location: '',
+      preferences: const [],
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
   }
 
   /// Update user profile
-  void updateUserProfile(UserProfile updatedProfile) {
-    _userProfile = updatedProfile.copyWith(
-      updatedAt: DateTime.now(),
-    );
+  Future<void> updateUserProfile(UserProfile updatedProfile) async {
+    final currentUser = _firebaseAuth.currentUser;
+    if (currentUser != null) {
+      // Update Firebase Auth profile
+      await currentUser.updateDisplayName(updatedProfile.name);
+
+      // Update cached profile
+      _cachedUserProfile = updatedProfile.copyWith(
+        updatedAt: DateTime.now(),
+      );
+      _cachedUserId = currentUser.uid;
+
+      // Note: In a full implementation, you would also update Firestore user document
+      // await _firestoreUserService.updateUserProfile(currentUser.uid, updatedProfile);
+    }
   }
 
   /// Get account settings items
@@ -87,7 +138,8 @@ class ProfileService {
   }
 
   /// Handle settings item tap
-  void handleSettingsItemTap(String itemId) {
+  Future<void> handleSettingsItemTap(
+      String itemId, BuildContext context) async {
     // In a real implementation, these would navigate to respective pages
     switch (itemId) {
       case 'personal_info':
@@ -108,10 +160,75 @@ class ProfileService {
       case 'privacy':
         // Navigate to privacy settings page
         break;
+      case 'sign_out':
+        await _showSignOutConfirmation(context);
+        break;
       default:
         // Handle unknown settings item
         break;
     }
+  }
+
+  /// Show sign out confirmation dialog
+  Future<void> _showSignOutConfirmation(BuildContext context) async {
+    final bool? shouldSignOut = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Sign Out'),
+          content: const Text('Are you sure you want to sign out?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.red,
+              ),
+              child: const Text('Sign Out'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldSignOut == true && context.mounted) {
+      await _signOut(context);
+    }
+  }
+
+  /// Sign out the current user
+  Future<void> _signOut(BuildContext context) async {
+    try {
+      await _firebaseAuth.signOut();
+      // Clear cached profile data
+      _cachedUserProfile = null;
+      _cachedUserId = null;
+
+      // Navigate to login screen
+      if (context.mounted) {
+        context.go(AppRoutes.login);
+      }
+    } catch (e) {
+      debugPrint('Error signing out: $e');
+      // Show error message to user
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to sign out. Please try again.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Refresh the cached user profile
+  void refreshProfile() {
+    _cachedUserProfile = null;
+    _cachedUserId = null;
   }
 
   /// Get profile avatar color
@@ -121,8 +238,8 @@ class ProfileService {
 
   /// Check if user has profile image
   bool hasProfileImage() {
-    return _userProfile.profileImageUrl != null &&
-        _userProfile.profileImageUrl!.isNotEmpty;
+    final currentUser = _firebaseAuth.currentUser;
+    return currentUser?.photoURL != null && currentUser!.photoURL!.isNotEmpty;
   }
 
   /// Get section titles

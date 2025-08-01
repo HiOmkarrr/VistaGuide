@@ -117,13 +117,53 @@ class _LoginPageState extends State<LoginPage> {
                         width: 80,
                         height: 80,
                         decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(40),
-                        ),
-                        child: const Icon(
-                          Icons.explore,
-                          size: 40,
                           color: Colors.white,
+                          borderRadius: BorderRadius.circular(40),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(40),
+                          child: Image.asset(
+                            'assets/images/vistaguide_logo.png',
+                            width: 80,
+                            height: 80,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              // Fallback to custom VG logo if image fails to load
+                              return Container(
+                                width: 80,
+                                height: 80,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      AppColors.primary,
+                                      AppColors.primary.withValues(alpha: 0.8),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(40),
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    'VG',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      letterSpacing: 1,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
                         ),
                       ),
                       const SizedBox(height: 16),

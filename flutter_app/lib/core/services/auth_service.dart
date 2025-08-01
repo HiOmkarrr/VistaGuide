@@ -8,7 +8,8 @@ import 'firestore_user_service.dart';
 class AuthService extends ChangeNotifier {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   final FirestoreUserService _firestoreUserService = FirestoreUserService();
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  bool _isGoogleSignInInitialized = false;
 
   /// Current authenticated user
   User? get currentUser => _firebaseAuth.currentUser;
@@ -18,6 +19,18 @@ class AuthService extends ChangeNotifier {
 
   /// Check if user is currently authenticated
   bool get isAuthenticated => currentUser != null;
+
+  /// Initialize Google Sign-In
+  Future<void> _initializeGoogleSignIn() async {
+    if (!_isGoogleSignInInitialized) {
+      try {
+        await _googleSignIn.initialize();
+        _isGoogleSignInInitialized = true;
+      } catch (e) {
+        debugPrint('Failed to initialize Google Sign-In: $e');
+      }
+    }
+  }
 
   /// Sign in with email and password
   Future<UserCredential?> signInWithEmailAndPassword({
@@ -78,22 +91,25 @@ class AuthService extends ChangeNotifier {
 
   /// Sign in with Google
   Future<UserCredential?> signInWithGoogle() async {
+    await _initializeGoogleSignIn();
+
     try {
       // Trigger the authentication flow
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate(
+        scopeHint: ['email', 'profile'],
+      );
 
-      if (googleUser == null) {
-        // User canceled the sign-in
-        return null;
-      }
+      // Get authentication details
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
 
-      // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+      // Get authorization for access token
+      final authClient = _googleSignIn.authorizationClient;
+      final authorization =
+          await authClient.authorizationForScopes(['email', 'profile']);
 
       // Create a new credential
       final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
+        accessToken: authorization?.accessToken,
         idToken: googleAuth.idToken,
       );
 
@@ -125,10 +141,8 @@ class AuthService extends ChangeNotifier {
   /// Sign out current user
   Future<void> signOut() async {
     try {
-      // Sign out from Google if signed in with Google
-      if (await _googleSignIn.isSignedIn()) {
-        await _googleSignIn.signOut();
-      }
+      // Sign out from Google (this will handle if user is not signed in)
+      await _googleSignIn.signOut();
 
       // Sign out from Firebase
       await _firebaseAuth.signOut();

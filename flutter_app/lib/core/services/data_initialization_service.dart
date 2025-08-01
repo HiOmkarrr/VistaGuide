@@ -12,7 +12,7 @@ class DataInitializationService {
       // Check if destinations already exist
       final existingDestinations = await destinationsCollection.limit(1).get();
       if (existingDestinations.docs.isNotEmpty) {
-        print('Sample destinations already exist');
+        // print('Sample destinations already exist');
         return;
       }
 
@@ -221,47 +221,47 @@ class DataInitializationService {
         await destinationsCollection.add(destination);
       }
 
-      print(
-          'Successfully initialized ${sampleDestinations.length} sample destinations');
+      // print(
+      //     'Successfully initialized ${sampleDestinations.length} sample destinations');
     } catch (e) {
-      print('Error initializing sample destinations: $e');
+      // print('Error initializing sample destinations: $e');
       throw Exception('Failed to initialize sample data: $e');
     }
   }
 
   /// Initialize Firestore security rules (development only)
   void printFirestoreRules() {
-    print('''
-Firestore Security Rules for VistaGuide (Development):
+//     print('''
+// Firestore Security Rules for VistaGuide (Development):
 
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Users can read and write their own user data
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
+// rules_version = '2';
+// service cloud.firestore {
+//   match /databases/{database}/documents {
+//     // Users can read and write their own user data
+//     match /users/{userId} {
+//       allow read, write: if request.auth != null && request.auth.uid == userId;
+//     }
     
-    // All authenticated users can read destinations
-    match /destinations/{destinationId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && hasAdminRole();
-    }
+//     // All authenticated users can read destinations
+//     match /destinations/{destinationId} {
+//       allow read: if request.auth != null;
+//       allow write: if request.auth != null && hasAdminRole();
+//     }
     
-    // Users can read and write their own user data
-    match /userData/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
+//     // Users can read and write their own user data
+//     match /userData/{userId} {
+//       allow read, write: if request.auth != null && request.auth.uid == userId;
+//     }
     
-    // Function to check admin role (implement based on your needs)
-    function hasAdminRole() {
-      return request.auth.token.admin == true;
-    }
-  }
-}
+//     // Function to check admin role (implement based on your needs)
+//     function hasAdminRole() {
+//       return request.auth.token.admin == true;
+//     }
+//   }
+// }
 
-Add these rules to your Firestore console for development.
-For production, implement more specific rules based on your requirements.
-    ''');
+// Add these rules to your Firestore console for development.
+// For production, implement more specific rules based on your requirements.
+//     ''');
   }
 }
