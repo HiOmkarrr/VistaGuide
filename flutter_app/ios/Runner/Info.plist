@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
+	<!-- Location permissions for iOS -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>VistaGuide needs location access to provide weather information, nearby landmarks, and emergency services.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>VistaGuide needs location access to provide weather information, nearby landmarks, and emergency services.</string>
 </dict>
 </plist>

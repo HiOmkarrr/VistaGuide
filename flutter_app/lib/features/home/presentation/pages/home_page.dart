@@ -3,7 +3,8 @@ import '../../../../shared/widgets/bottom_navigation_bar.dart';
 import '../../../../shared/widgets/custom_search_bar.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../data/services/home_service.dart';
-import '../localWidgets/app_header.dart';
+import '../localWidgets/greeting_widget.dart';
+import '../localWidgets/location_weather_widget.dart';
 import '../localWidgets/recommended_destinations.dart';
 import '../localWidgets/quick_access_grid.dart';
 
@@ -20,32 +21,36 @@ class HomePage extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Column(
-          children: [
-            AppHeader(
-              title: homeService.getAppTitle(),
-              onSettingsTap: () => homeService.navigateToSettings(),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSearchBar(),
-                    RecommendedDestinations(
-                      destinations: destinations,
-                      onDestinationTap: (destinationId) {
-                        // Handle destination tap - placeholder for navigation
-                      },
-                    ),
-                    QuickAccessGrid(
-                      items: quickAccessItems,
-                    ),
-                  ],
-                ),
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 16),
+              // Greeting Section
+              const GreetingWidget(),
+
+              // Location and Weather Section
+              const LocationWeatherWidget(),
+
+              // Search Bar
+              _buildSearchBar(),
+
+              // Recommended Destinations Section
+              RecommendedDestinations(
+                destinations: destinations,
+                onDestinationTap: (destinationId) {
+                  // Handle destination tap - placeholder for navigation
+                },
               ),
-            ),
-          ],
+
+              // Quick Access Grid
+              QuickAccessGrid(
+                items: quickAccessItems,
+              ),
+
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
       bottomNavigationBar: const CustomBottomNavigationBar(currentIndex: 0),
@@ -53,8 +58,11 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _buildSearchBar() {
-    return const CustomSearchBar(
-      hintText: 'Where to?',
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: const CustomSearchBar(
+        hintText: 'Where to?',
+      ),
     );
   }
 }

@@ -35,7 +35,23 @@ class EmergencyPage extends StatelessWidget {
               ),
               const SizedBox(height: 24),
               EmergencyButton(
-                onPressed: () => emergencyService.handleEmergencyPress(),
+                onPressed: () async {
+                  final emergencyData =
+                      await emergencyService.handleEmergencyPress();
+
+                  // Show confirmation to user
+                  if (context.mounted) {
+                    final location =
+                        emergencyData['address'] ?? 'Unknown location';
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Emergency alert sent from: $location'),
+                        backgroundColor: AppColors.emergency,
+                        duration: const Duration(seconds: 4),
+                      ),
+                    );
+                  }
+                },
               ),
               const SizedBox(height: 24),
               EmergencyContactsList(

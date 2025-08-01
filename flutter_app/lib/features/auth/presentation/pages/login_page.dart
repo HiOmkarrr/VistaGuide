@@ -274,7 +274,9 @@ class _LoginPageState extends State<LoginPage> {
                 // Divider
                 const Row(
                   children: [
-                    Expanded(child: Divider(color: AppColors.textSecondary)),
+                    Expanded(
+                        child: Divider(
+                            color: AppColors.textSecondary)),
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
@@ -285,7 +287,9 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                     ),
-                    Expanded(child: Divider(color: AppColors.textSecondary)),
+                    Expanded(
+                        child: Divider(
+                            color: AppColors.textSecondary)),
                   ],
                 ),
 
