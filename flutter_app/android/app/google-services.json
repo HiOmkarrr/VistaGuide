@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "585843765512",
+    "project_id": "vistaguide-54922",
+    "storage_bucket": "vistaguide-54922.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:585843765512:android:c9b0f86b57f4e247817cbd",
+        "android_client_info": {
+          "package_name": "com.example.flutter_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyADV8hOYYKyEQhVBzHTB2SnaMtC-l1Kfpo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
