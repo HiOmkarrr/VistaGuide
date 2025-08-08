@@ -67,17 +67,24 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _signInWithGoogle() async {
+    debugPrint('Login Page: _signInWithGoogle called');
     setState(() {
       _isGoogleLoading = true;
     });
 
     try {
+      debugPrint('Login Page: Calling _authService.signInWithGoogle()');
       final userCredential = await _authService.signInWithGoogle();
+      debugPrint('Login Page: _authService.signInWithGoogle() returned');
 
       if (userCredential != null && mounted) {
+        debugPrint('Login Page: Sign-in successful, navigating to home');
         context.go(AppRoutes.home);
+      } else {
+        debugPrint('Login Page: Sign-in returned null userCredential');
       }
     } catch (e) {
+      debugPrint('Login Page: Caught error: ${e.toString()}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -88,6 +95,7 @@ class _LoginPageState extends State<LoginPage> {
       }
     } finally {
       if (mounted) {
+        debugPrint('Login Page: Setting _isGoogleLoading to false');
         setState(() {
           _isGoogleLoading = false;
         });
