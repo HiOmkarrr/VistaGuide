@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'firestore_user_service.dart';
 
@@ -81,7 +82,15 @@ class AuthService extends ChangeNotifier {
     try {
       debugPrint('🔍 AuthService: Starting Google Sign-in');
       
+      // Check if Google Sign-In is available
+      debugPrint('🔍 AuthService: Checking Google Sign-In availability');
+      
+      // Sign out first to clear any cached credentials
+      debugPrint('🔍 AuthService: Signing out any existing Google session');
+      await _googleSignIn.signOut();
+      
       // Trigger the authentication flow
+      debugPrint('🔍 AuthService: Triggering sign-in flow');
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       debugPrint('🔍 AuthService: Google sign-in completed, user: ${googleUser?.email}');
 
@@ -91,16 +100,22 @@ class AuthService extends ChangeNotifier {
         return null;
       }
 
+      debugPrint('🔍 AuthService: Getting authentication details');
       // Obtain the auth details from the request
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
+      
+      debugPrint('🔍 AuthService: Access token: ${googleAuth.accessToken != null ? "Present" : "Missing"}');
+      debugPrint('🔍 AuthService: ID token: ${googleAuth.idToken != null ? "Present" : "Missing"}');
 
       // Create a new credential
+      debugPrint('🔍 AuthService: Creating Firebase credential');
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
 
+      debugPrint('🔍 AuthService: Signing in to Firebase');
       // Sign in to Firebase with the Google credentials
       final userCredential =
           await _firebaseAuth.signInWithCredential(credential);
@@ -120,9 +135,22 @@ class AuthService extends ChangeNotifier {
       notifyListeners();
       return userCredential;
     } on FirebaseAuthException catch (e) {
+      debugPrint('❌ Firebase Auth Exception: ${e.code} - ${e.message}');
       throw _handleAuthException(e);
+    } on PlatformException catch (e) {
+      debugPrint('❌ Platform Exception: ${e.code} - ${e.message}');
+      if (e.code == 'sign_in_failed') {
+        throw 'Google Sign-In failed. Please check your internet connection and try again.';
+      } else if (e.code == 'network_error') {
+        throw 'Network error. Please check your internet connection.';
+      } else if (e.code == 'sign_in_canceled') {
+        throw 'Sign-in was canceled.';
+      } else {
+        throw 'Google Sign-In error: ${e.message ?? e.code}';
+      }
     } catch (e) {
-      throw 'Failed to sign in with Google. Please try again.';
+      debugPrint('❌ General Google Sign-in error: $e');
+      throw 'Failed to sign in with Google. Error: ${e.toString()}';
     }
   }
 

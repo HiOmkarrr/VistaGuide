@@ -15,7 +15,6 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final homeService = HomeService();
-    final destinations = homeService.getRecommendedDestinations();
     final quickAccessItems = homeService.getQuickAccessItems();
 
     return Scaffold(
@@ -29,18 +28,21 @@ class HomePage extends StatelessWidget {
               // Greeting Section
               const GreetingWidget(),
 
-              // Location and Weather Section
+              // Location and Weather Section (Original working widget)
               const LocationWeatherWidget(),
 
               // Search Bar
               _buildSearchBar(),
 
-              // Recommended Destinations Section
+              // Recommended Destinations Section (with loading indicators)
               RecommendedDestinations(
-                destinations: destinations,
                 onDestinationTap: (destinationId) {
                   // Handle destination tap - placeholder for navigation
+                  print('Destination tapped: $destinationId');
                 },
+                sectionTitle: 'Personalized for You',
+                limit: 8,
+                enableLocationBasedRecommendations: true,
               ),
 
               // Quick Access Grid

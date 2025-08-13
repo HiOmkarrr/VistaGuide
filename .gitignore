@@ -10,6 +10,7 @@
 /flutter_app/.pub/
 /flutter_app/*.iml
 /flutter_app/*.lastUpdate
+/buffer_files/
 
 # Python
 /backend/venv/
