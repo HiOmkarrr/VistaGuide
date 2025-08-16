@@ -7,17 +7,25 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:585843765512:android:c9b0f86b57f4e247817cbd",
+        "mobilesdk_app_id": "1:585843765512:android:02143f3108bb52ad817cbd",
         "android_client_info": {
-          "package_name": "com.example.flutter_app"
+          "package_name": "com.example.vistaguide"
         }
       },
       "oauth_client": [
         {
-          "client_id": "585843765512-dtcbthc6jg6q5ud2isko6eds4v29e61f.apps.googleusercontent.com",
+          "client_id": "585843765512-55ga0e45gug0hdrmubu5p6pqct0p42qm.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.flutter_app",
+            "package_name": "com.example.vistaguide",
+            "certificate_hash": "8aeb73ef2de0a0c7c4633ba164834875a4773032"
+          }
+        },
+        {
+          "client_id": "585843765512-fn6g3isfel1t61pksbm14u9112s18h98.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.vistaguide",
             "certificate_hash": "c09c7d0fff3b480fc9a9c22d32b1ac931e2d59e8"
           }
         },

@@ -64,7 +64,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '585843765512',
     projectId: 'vistaguide-54922',
     storageBucket: 'vistaguide-54922.firebasestorage.app',
-    iosBundleId: 'com.example.flutterApp',
+    iosBundleId: 'com.example.vistaguide',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -73,7 +73,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '585843765512',
     projectId: 'vistaguide-54922',
     storageBucket: 'vistaguide-54922.firebasestorage.app',
-    iosBundleId: 'com.example.flutterApp',
+    iosBundleId: 'com.example.vistaguide',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
