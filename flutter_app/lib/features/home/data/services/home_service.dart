@@ -38,31 +38,24 @@ class HomeService {
   final List<QuickAccessItem> _quickAccessItems = [
     const QuickAccessItem(
       id: '1',
-      title: 'Landmark Recognition',
-      icon: Icons.camera_alt,
-      color: AppColors.primary,
-      route: AppRoutes.landmarkRecognition,
-    ),
-    const QuickAccessItem(
-      id: '2',
-      title: 'Emergency Reporting',
-      icon: Icons.warning,
+      title: 'Hospital',
+      icon: Icons.local_hospital,
       color: AppColors.emergency,
       route: AppRoutes.emergency,
     ),
     const QuickAccessItem(
-      id: '3',
-      title: 'Local Events',
-      icon: Icons.event,
-      color: AppColors.success,
-      route: AppRoutes.events,
+      id: '2',
+      title: 'Medical',
+      icon: Icons.medical_services,
+      color: AppColors.primary,
+      route: AppRoutes.emergency,
     ),
     const QuickAccessItem(
-      id: '4',
-      title: 'User Profile',
-      icon: Icons.person,
-      color: AppColors.grey600,
-      route: AppRoutes.profile,
+      id: '3',
+      title: 'Emergency Contact',
+      icon: Icons.contact_emergency,
+      color: Colors.orange,
+      route: AppRoutes.emergency,
     ),
   ];
 
@@ -71,8 +64,8 @@ class HomeService {
     return List.unmodifiable(_destinations);
   }
 
-  /// Get quick access items
-  List<QuickAccessItem> getQuickAccessItems() {
+  /// Get emergency reporting items
+  List<QuickAccessItem> getEmergencyReportingItems() {
     return List.unmodifiable(_quickAccessItems);
   }
 

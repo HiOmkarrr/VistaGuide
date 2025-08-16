@@ -6,7 +6,7 @@ import '../../core/navigation/app_routes.dart';
 /// Custom bottom navigation bar widget used across the app
 class CustomBottomNavigationBar extends StatelessWidget {
   final int currentIndex;
-  
+
   const CustomBottomNavigationBar({
     super.key,
     required this.currentIndex,
@@ -28,19 +28,19 @@ class CustomBottomNavigationBar extends StatelessWidget {
           label: 'Home',
         ),
         BottomNavigationBarItem(
+          icon: Icon(Icons.map_outlined),
+          activeIcon: Icon(Icons.map),
+          label: 'Journey',
+        ),
+        BottomNavigationBarItem(
           icon: Icon(Icons.camera_alt_outlined),
           activeIcon: Icon(Icons.camera_alt),
-          label: 'Landmark\nRecognition',
+          label: 'Landmark',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.warning_outlined),
           activeIcon: Icon(Icons.warning),
           label: 'Emergency',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.event_outlined),
-          activeIcon: Icon(Icons.event),
-          label: 'Events',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.person_outlined),
@@ -57,13 +57,13 @@ class CustomBottomNavigationBar extends StatelessWidget {
         context.go(AppRoutes.home);
         break;
       case 1:
-        context.go(AppRoutes.landmarkRecognition);
+        context.go(AppRoutes.journey);
         break;
       case 2:
-        context.go(AppRoutes.emergency);
+        context.go(AppRoutes.landmarkRecognition);
         break;
       case 3:
-        context.go(AppRoutes.events);
+        context.go(AppRoutes.emergency);
         break;
       case 4:
         context.go(AppRoutes.profile);

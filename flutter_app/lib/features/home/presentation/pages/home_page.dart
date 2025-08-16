@@ -15,7 +15,7 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final homeService = HomeService();
-    final quickAccessItems = homeService.getQuickAccessItems();
+    final quickAccessItems = homeService.getEmergencyReportingItems();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -24,13 +24,15 @@ class HomePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               // Greeting Section
               const GreetingWidget(),
 
+              const SizedBox(height: 8),
               // Location and Weather Section (Original working widget)
               const LocationWeatherWidget(),
 
+              const SizedBox(height: 8),
               // Search Bar
               _buildSearchBar(),
 
@@ -45,9 +47,10 @@ class HomePage extends StatelessWidget {
                 enableLocationBasedRecommendations: true,
               ),
 
-              // Quick Access Grid
+              // Emergency Reporting Grid
               QuickAccessGrid(
                 items: quickAccessItems,
+                sectionTitle: 'Emergency Reporting',
               ),
 
               const SizedBox(height: 20),
@@ -60,11 +63,8 @@ class HomePage extends StatelessWidget {
   }
 
   Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: const CustomSearchBar(
-        hintText: 'Where to?',
-      ),
+    return const CustomSearchBar(
+      hintText: 'Where to?',
     );
   }
 }

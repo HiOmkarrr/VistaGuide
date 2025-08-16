@@ -67,7 +67,7 @@ class EmergencyPage extends StatelessWidget {
           ),
         ),
       ),
-      bottomNavigationBar: const CustomBottomNavigationBar(currentIndex: 2),
+      bottomNavigationBar: const CustomBottomNavigationBar(currentIndex: 3),
     );
   }
 }

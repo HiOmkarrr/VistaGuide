@@ -42,11 +42,4 @@ class AppColors {
   // Bottom navigation colors
   static const Color bottomNavSelected = primary;
   static const Color bottomNavUnselected = grey500;
-
-  // Event category colors
-  static const Color festivalColor = Color(0xFFE91E63);
-  static const Color concertColor = Color(0xFF9C27B0);
-  static const Color exhibitionColor = Color(0xFF673AB7);
-  static const Color foodColor = Color(0xFFFF5722);
-  static const Color outdoorColor = Color(0xFF4CAF50);
 }

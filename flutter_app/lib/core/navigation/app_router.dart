@@ -6,8 +6,10 @@ import '../../features/auth/presentation/pages/register_page.dart';
 import '../../features/auth/presentation/pages/forgot_password_page.dart';
 import '../../features/home/presentation/pages/home_page.dart';
 import '../../features/landmark_recognition/presentation/pages/landmark_recognition_page.dart';
+import '../../features/journeys/presentation/pages/journey_page.dart';
+import '../../features/journeys/presentation/pages/add_journey_page.dart';
+import '../../features/journeys/presentation/pages/journey_details_page.dart';
 import '../../features/emergency_reporting/presentation/pages/emergency_page.dart';
-import '../../features/event_alerts/presentation/pages/events_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 
 /// Main router configuration for the VistaGuide app
@@ -45,16 +47,34 @@ class AppRouter {
         builder: (context, state) => const LandmarkRecognitionPage(),
       ),
 
+      // Journey route
+      GoRoute(
+        path: AppRoutes.journey,
+        builder: (context, state) => const JourneyPage(),
+      ),
+
+      // Add Journey route
+      GoRoute(
+        path: AppRoutes.journeyAdd,
+        builder: (context, state) => const AddJourneyPage(),
+      ),
+
+      // Journey Details route
+      GoRoute(
+        path: AppRoutes.journeyDetails,
+        builder: (context, state) {
+          final journeyId = state.uri.queryParameters['id'];
+          if (journeyId == null) {
+            return const JourneyPage(); // Fallback to journey list
+          }
+          return JourneyDetailsPage(journeyId: journeyId);
+        },
+      ),
+
       // Emergency route
       GoRoute(
         path: AppRoutes.emergency,
         builder: (context, state) => const EmergencyPage(),
-      ),
-
-      // Events route
-      GoRoute(
-        path: AppRoutes.events,
-        builder: (context, state) => const EventsPage(),
       ),
 
       // Profile route

@@ -13,8 +13,8 @@ class GreetingWidget extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -33,24 +33,12 @@ class GreetingWidget extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            greetingService.getGreetingMessage(),
-            style: AppTextStyles.h2.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Ready for your next adventure?',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: Colors.white.withValues(alpha: 0.9),
-            ),
-          ),
-        ],
+      child: Text(
+        greetingService.getGreetingMessage(),
+        style: AppTextStyles.h2.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

@@ -49,7 +49,7 @@ class LandmarkRecognitionPage extends StatelessWidget {
           ),
         ),
       ),
-      bottomNavigationBar: const CustomBottomNavigationBar(currentIndex: 1),
+      bottomNavigationBar: const CustomBottomNavigationBar(currentIndex: 2),
     );
   }
 }

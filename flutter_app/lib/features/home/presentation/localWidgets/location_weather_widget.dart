@@ -51,8 +51,8 @@ class _LocationWeatherWidgetState extends State<LocationWeatherWidget> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
@@ -68,45 +68,6 @@ class _LocationWeatherWidgetState extends State<LocationWeatherWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(
-                Icons.location_on,
-                color: AppColors.primary,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Current Location',
-                style: AppTextStyles.h3.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const Spacer(),
-              if (_isLoading)
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(AppColors.primary),
-                  ),
-                )
-              else
-                IconButton(
-                  icon: Icon(
-                    Icons.refresh,
-                    size: 20,
-                    color: AppColors.grey600,
-                  ),
-                  onPressed: _loadLocationAndWeather,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
           if (_isLoading)
             _buildLoadingState()
           else if (_errorMessage.isNotEmpty)
@@ -121,40 +82,75 @@ class _LocationWeatherWidgetState extends State<LocationWeatherWidget> {
   }
 
   Widget _buildLoadingState() {
-    return Column(
+    return Row(
       children: [
-        Row(
-          children: [
-            Icon(
-              Icons.location_city,
-              color: AppColors.grey400,
-              size: 18,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Loading location...',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.grey600,
+        // Left side: Location and Weather loading indicators
+        Expanded(
+          child: Row(
+            children: [
+              // Location loading
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.location_city,
+                      color: AppColors.grey400,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        'Loading...',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.grey600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(width: 8),
+              // Weather loading
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.wb_sunny_outlined,
+                      color: AppColors.grey400,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        'Loading...',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.grey600,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Icon(
-              Icons.wb_sunny_outlined,
-              color: AppColors.grey400,
-              size: 18,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Loading weather...',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.grey600,
+        const SizedBox(width: 8),
+        // Right side: Loading spinner
+        SizedBox(
+          width: 32,
+          height: 32,
+          child: Center(
+            child: SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
               ),
             ),
-          ],
+          ),
         ),
       ],
     );
@@ -163,18 +159,41 @@ class _LocationWeatherWidgetState extends State<LocationWeatherWidget> {
   Widget _buildErrorState() {
     return Row(
       children: [
-        Icon(
-          Icons.error_outline,
-          color: AppColors.emergency,
-          size: 18,
+        // Left side: Error message
+        Expanded(
+          child: Row(
+            children: [
+              Icon(
+                Icons.error_outline,
+                color: AppColors.emergency,
+                size: 18,
+              ),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  _errorMessage,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.emergency,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            _errorMessage,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.emergency,
-            ),
+        // Right side: Reload button
+        IconButton(
+          icon: Icon(
+            Icons.refresh,
+            size: 20,
+            color: AppColors.grey600,
+          ),
+          onPressed: _loadLocationAndWeather,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(
+            minWidth: 32,
+            minHeight: 32,
           ),
         ),
       ],
@@ -182,58 +201,87 @@ class _LocationWeatherWidgetState extends State<LocationWeatherWidget> {
   }
 
   Widget _buildWeatherData(WeatherData weather) {
-    return Column(
+    return Row(
       children: [
-        Row(
-          children: [
-            Icon(
-              Icons.location_city,
-              color: AppColors.primary,
-              size: 18,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                weather.cityName,
-                style: AppTextStyles.bodyLarge.copyWith(
-                  fontWeight: FontWeight.w500,
+        // Left side: Location and Weather columns
+        Expanded(
+          child: Row(
+            children: [
+              // Location column
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.location_city,
+                      color: AppColors.primary,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        weather.cityName,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
+              const SizedBox(width: 8),
+              // Weather column
+              Expanded(
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.wb_sunny,
+                      color: Colors.orange,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      _locationWeatherService
+                          .getFormattedTemperature(weather.temperature),
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(
+                        weather.description
+                            .split(' ')
+                            .map((word) =>
+                                word[0].toUpperCase() + word.substring(1))
+                            .join(' '),
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.grey700,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Icon(
-              Icons.wb_sunny,
-              color: Colors.orange,
-              size: 18,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              _locationWeatherService
-                  .getFormattedTemperature(weather.temperature),
-              style: AppTextStyles.bodyLarge.copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                weather.description
-                    .split(' ')
-                    .map((word) => word[0].toUpperCase() + word.substring(1))
-                    .join(' '),
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.grey700,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
+        const SizedBox(width: 8),
+        // Right side: Reload button
+        IconButton(
+          icon: Icon(
+            Icons.refresh,
+            size: 20,
+            color: AppColors.grey600,
+          ),
+          onPressed: _loadLocationAndWeather,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(
+            minWidth: 32,
+            minHeight: 32,
+          ),
         ),
       ],
     );
@@ -242,16 +290,41 @@ class _LocationWeatherWidgetState extends State<LocationWeatherWidget> {
   Widget _buildNoDataState() {
     return Row(
       children: [
-        Icon(
-          Icons.location_off,
-          color: AppColors.grey400,
-          size: 18,
+        // Left side: No data message
+        Expanded(
+          child: Row(
+            children: [
+              Icon(
+                Icons.location_off,
+                color: AppColors.grey400,
+                size: 18,
+              ),
+              const SizedBox(width: 4),
+              Flexible(
+                child: Text(
+                  'Location not available',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.grey600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(width: 8),
-        Text(
-          'Location not available',
-          style: AppTextStyles.bodyMedium.copyWith(
+        // Right side: Reload button
+        IconButton(
+          icon: Icon(
+            Icons.refresh,
+            size: 20,
             color: AppColors.grey600,
+          ),
+          onPressed: _loadLocationAndWeather,
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(
+            minWidth: 32,
+            minHeight: 32,
           ),
         ),
       ],

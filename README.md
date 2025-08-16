@@ -2,7 +2,7 @@
 
 ## Overview
 
-VistaGuide is a cross-platform mobile application developed as a final year BTech project. It aims to provide users with a comprehensive guide to explore landmarks, events, and destinations in various cities. The application is built using Flutter, enabling deployment to Android, iOS, Web, and Desktop platforms from a single codebase.
+VistaGuide is a cross-platform mobile application developed as a final year BTech project. It aims to provide users with a comprehensive guide to explore landmarks and destinations in various cities. The application is built using Flutter, enabling deployment to Android, iOS, Web, and Desktop platforms from a single codebase.
 
 ## Project Structure
 
@@ -16,7 +16,6 @@ The project follows a modular structure to ensure maintainability and scalabilit
         -   `theme/`: Defines the app's color scheme, text styles, and overall theme.
     -   `features/`: Contains modules for different features of the application.
         -   `emergency_reporting/`: Manages emergency contact information and reporting functionalities.
-        -   `event_alerts/`: Provides information about local events and allows users to filter them.
         -   `home/`: Implements the main home screen with quick access options and destination recommendations.
         -   `landmark_recognition/`: Integrates camera functionality for recognizing landmarks and providing related information.
         -   `profile/`: Manages user profiles and settings.
