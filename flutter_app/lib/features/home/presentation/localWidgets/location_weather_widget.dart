@@ -17,6 +17,11 @@ class _LocationWeatherWidgetState extends State<LocationWeatherWidget> {
   bool _isLoading = true;
   WeatherData? _weatherData;
   String _errorMessage = '';
+  
+  // Cache management
+  static DateTime? _lastUpdated;
+  static WeatherData? _cachedWeatherData;
+  static const Duration _cacheInterval = Duration(minutes: 15);
 
   @override
   void initState() {
@@ -24,7 +29,19 @@ class _LocationWeatherWidgetState extends State<LocationWeatherWidget> {
     _loadLocationAndWeather();
   }
 
-  Future<void> _loadLocationAndWeather() async {
+  Future<void> _loadLocationAndWeather([bool forceRefresh = false]) async {
+    // Check if we have cached data that's still valid (unless forcing refresh)
+    if (!forceRefresh && 
+        _cachedWeatherData != null && 
+        _lastUpdated != null && 
+        DateTime.now().difference(_lastUpdated!) < _cacheInterval) {
+      setState(() {
+        _weatherData = _cachedWeatherData;
+        _isLoading = false;
+      });
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = '';
@@ -33,6 +50,10 @@ class _LocationWeatherWidgetState extends State<LocationWeatherWidget> {
     try {
       final weatherData = await _locationWeatherService.getWeatherData();
       if (mounted) {
+        // Cache the new data
+        _cachedWeatherData = weatherData;
+        _lastUpdated = DateTime.now();
+        
         setState(() {
           _weatherData = weatherData;
           _isLoading = false;

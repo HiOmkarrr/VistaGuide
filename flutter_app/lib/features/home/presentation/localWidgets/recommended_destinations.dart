@@ -8,7 +8,7 @@ import 'destination_card.dart';
 
 /// Enhanced recommended destinations section widget with dynamic loading and offline support
 class RecommendedDestinations extends StatefulWidget {
-  final Function(String destinationId)? onDestinationTap;
+  final Function(String destinationId, Destination destination)? onDestinationTap;
   final Function(Destination destination)? onLandmarkDetected;
   final String sectionTitle;
   final int limit;
@@ -39,6 +39,11 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
   String? _errorMessage;
   String _loadingMessage = 'Initializing...';
   LocationData? _currentLocation;
+  
+  // Cache management
+  static DateTime? _lastUpdated;
+  static List<Destination>? _cachedDestinations;
+  static const Duration _cacheInterval = Duration(minutes: 15);
 
   @override
   void initState() {
@@ -48,6 +53,18 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
 
   /// Load recommendations based on user location and preferences
   Future<void> _loadRecommendations() async {
+    // Check if we have cached data that's still valid
+    if (_cachedDestinations != null && 
+        _lastUpdated != null && 
+        DateTime.now().difference(_lastUpdated!) < _cacheInterval) {
+      setState(() {
+        _destinations = _cachedDestinations!;
+        _isLoading = false;
+        _loadingMessage = '';
+      });
+      return;
+    }
+
     try {
       setState(() {
         _isLoading = true;
@@ -115,6 +132,10 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
         _destinations = destinations;
         _isLoading = false;
         _loadingMessage = '';
+        
+        // Cache the new data
+        _cachedDestinations = destinations;
+        _lastUpdated = DateTime.now();
       });
 
     } catch (e) {
@@ -378,7 +399,7 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
                 destination: destination,
                 cardHeight: cardHeight,
                 onTap: widget.onDestinationTap != null
-                    ? () => widget.onDestinationTap!(destination.id)
+                    ? () => widget.onDestinationTap!(destination.id, destination)
                     : null,
                 showDistance: destination.distanceKm != null,
                 isOfflineAvailable: destination.isOfflineAvailable || _isOfflineMode,

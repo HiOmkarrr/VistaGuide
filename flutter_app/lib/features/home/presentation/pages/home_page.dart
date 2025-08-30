@@ -7,6 +7,7 @@ import '../localWidgets/greeting_widget.dart';
 import '../localWidgets/location_weather_widget.dart';
 import '../localWidgets/recommended_destinations.dart';
 import '../localWidgets/quick_access_grid.dart';
+import 'destination_detail_page.dart';
 
 /// Home page - central hub with search, recommendations, and quick access
 class HomePage extends StatelessWidget {
@@ -38,9 +39,16 @@ class HomePage extends StatelessWidget {
 
               // Recommended Destinations Section (with loading indicators)
               RecommendedDestinations(
-                onDestinationTap: (destinationId) {
-                  // Handle destination tap - placeholder for navigation
-                  print('Destination tapped: $destinationId');
+                onDestinationTap: (destinationId, destination) {
+                  // Navigate to destination detail page with pre-loaded data
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => DestinationDetailPage(
+                        destinationId: destinationId,
+                        initialDestination: destination,
+                      ),
+                    ),
+                  );
                 },
                 sectionTitle: 'Personalized for You',
                 limit: 8,

@@ -229,14 +229,46 @@ class Destination {
           ? EducationalInfo.fromJson(json['educationalInfo'] as Map<String, dynamic>)
           : null,
       images: (json['images'] as List<dynamic>?)?.cast<String>() ?? [],
-      createdAt: json['createdAt'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(json['createdAt'] as int)
-          : null,
-      updatedAt: json['updatedAt'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(json['updatedAt'] as int)
-          : null,
+      createdAt: json['createdAt'] != null ? _parseDateTime(json['createdAt']) : null,
+      updatedAt: json['updatedAt'] != null ? _parseDateTime(json['updatedAt']) : null,
       isOfflineAvailable: json['isOfflineAvailable'] as bool? ?? false,
     );
+  }
+
+  /// Helper method to parse DateTime from various formats (int timestamp or Firestore Timestamp)
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    
+    if (value is int) {
+      return DateTime.fromMillisecondsSinceEpoch(value);
+    }
+    
+    // Handle Firestore Timestamp
+    if (value.runtimeType.toString() == 'Timestamp') {
+      try {
+        return (value as dynamic).toDate() as DateTime;
+      } catch (e) {
+        print('Error parsing Firestore Timestamp: $e');
+        return null;
+      }
+    }
+    
+    if (value is DateTime) {
+      return value;
+    }
+    
+    // Try parsing as string
+    if (value is String) {
+      try {
+        return DateTime.parse(value);
+      } catch (e) {
+        print('Error parsing DateTime string: $e');
+        return null;
+      }
+    }
+    
+    print('Unhandled DateTime type: ${value.runtimeType}');
+    return null;
   }
 
   /// Create a basic destination (for backward compatibility)

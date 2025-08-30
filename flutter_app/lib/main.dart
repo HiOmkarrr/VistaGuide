@@ -5,6 +5,7 @@ import 'core/theme/app_theme.dart';
 import 'core/navigation/app_router.dart';
 import 'core/services/magic_lane_service.dart'; // This is actually Magic Lane service now
 import 'core/services/simple_offline_storage_service.dart';
+import 'core/services/firestore_data_seeder.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -32,6 +33,12 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     print('✅ Firebase initialized');
+    
+    // Seed Firestore with sample data if empty (non-blocking)
+    FirestoreDataSeeder.seedIfEmpty().catchError((e) {
+      print('⚠️ Failed to seed Firestore data: $e');
+    });
+    
   } catch (e) {
     print('❌ Firebase initialization failed: $e');
     // Continue - some features may not work but app can still start

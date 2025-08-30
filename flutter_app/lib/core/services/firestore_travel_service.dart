@@ -302,15 +302,25 @@ class FirestoreTravelService {
 
       List<Destination> destinations = [];
 
-      // Try Magic Lane API first for real-time data
-      if (useGooglePlaces) {
+      // Start with Firestore data (which has rich historical info) then supplement with Magic Lane
+      final firestoreDestinations = await _getFirestoreRecommendations(
+        userLat,
+        userLng,
+        radiusKm,
+        preferredTypes,
+        userPreferences,
+      );
+      destinations.addAll(firestoreDestinations);
+      
+      // If we need more results, try Magic Lane API for additional places
+      if (destinations.length < limit && useGooglePlaces) {
         try {
           final magicLaneDestinations =
               await MagicLaneService.searchNearbyPlaces(
             latitude: userLat,
             longitude: userLng,
             radiusKm: radiusKm,
-            maxResults: limit * 2, // Get more for filtering
+            maxResults: limit - destinations.length, // Only get what we need
             categories: preferredTypes ?? ['tourism', 'culture'],
           );
 
@@ -329,11 +339,11 @@ class FirestoreTravelService {
           destinations.addAll(magicLaneDestinations);
         } catch (e) {
           print(
-              '⚠️ Magic Lane API failed, falling back to offline/Firestore: $e');
+              '⚠️ Magic Lane API failed, using Firestore data only: $e');
         }
       }
 
-      // If API didn't provide enough results, try offline storage first
+      // If API didn't provide enough results, try offline storage for more
       if (destinations.length < limit) {
         try {
           final offlineStorage = SimpleOfflineStorageService();
@@ -354,18 +364,6 @@ class FirestoreTravelService {
         } catch (e) {
           print('⚠️ Offline storage access failed: $e');
         }
-      }
-
-      // If still not enough results, supplement with Firestore
-      if (destinations.length < limit) {
-        final firestoreDestinations = await _getFirestoreRecommendations(
-          userLat,
-          userLng,
-          radiusKm,
-          preferredTypes,
-          userPreferences,
-        );
-        destinations.addAll(firestoreDestinations);
       }
 
       // Remove duplicates and apply filtering
