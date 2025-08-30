@@ -33,12 +33,11 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     print('✅ Firebase initialized');
-    
+
     // Seed Firestore with sample data if empty (non-blocking)
     FirestoreDataSeeder.seedIfEmpty().catchError((e) {
       print('⚠️ Failed to seed Firestore data: $e');
     });
-    
   } catch (e) {
     print('❌ Firebase initialization failed: $e');
     // Continue - some features may not work but app can still start

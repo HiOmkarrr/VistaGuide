@@ -9,21 +9,21 @@ class GeoCoordinates {
   });
 
   Map<String, dynamic> toJson() => {
-    'latitude': latitude,
-    'longitude': longitude,
-  };
+        'latitude': latitude,
+        'longitude': longitude,
+      };
 
   factory GeoCoordinates.fromJson(Map<String, dynamic> json) => GeoCoordinates(
-    latitude: (json['latitude'] as num).toDouble(),
-    longitude: (json['longitude'] as num).toDouble(),
-  );
+        latitude: (json['latitude'] as num).toDouble(),
+        longitude: (json['longitude'] as num).toDouble(),
+      );
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is GeoCoordinates && 
-           other.latitude == latitude && 
-           other.longitude == longitude;
+    return other is GeoCoordinates &&
+        other.latitude == latitude &&
+        other.longitude == longitude;
   }
 
   @override
@@ -47,20 +47,21 @@ class HistoricalInfo {
   });
 
   Map<String, dynamic> toJson() => {
-    'briefDescription': briefDescription,
-    'extendedDescription': extendedDescription,
-    'keyEvents': keyEvents,
-    'timeline': timeline,
-    'relatedFigures': relatedFigures,
-  };
+        'briefDescription': briefDescription,
+        'extendedDescription': extendedDescription,
+        'keyEvents': keyEvents,
+        'timeline': timeline,
+        'relatedFigures': relatedFigures,
+      };
 
   factory HistoricalInfo.fromJson(Map<String, dynamic> json) => HistoricalInfo(
-    briefDescription: json['briefDescription'] as String,
-    extendedDescription: json['extendedDescription'] as String,
-    keyEvents: (json['keyEvents'] as List<dynamic>?)?.cast<String>() ?? [],
-    timeline: json['timeline'] as String?,
-    relatedFigures: (json['relatedFigures'] as List<dynamic>?)?.cast<String>() ?? [],
-  );
+        briefDescription: json['briefDescription'] as String,
+        extendedDescription: json['extendedDescription'] as String,
+        keyEvents: (json['keyEvents'] as List<dynamic>?)?.cast<String>() ?? [],
+        timeline: json['timeline'] as String?,
+        relatedFigures:
+            (json['relatedFigures'] as List<dynamic>?)?.cast<String>() ?? [],
+      );
 }
 
 /// Educational information for destinations
@@ -82,22 +83,26 @@ class EducationalInfo {
   });
 
   Map<String, dynamic> toJson() => {
-    'facts': facts,
-    'importance': importance,
-    'culturalRelevance': culturalRelevance,
-    'learningObjectives': learningObjectives,
-    'architecturalStyle': architecturalStyle,
-    'categories': categories,
-  };
+        'facts': facts,
+        'importance': importance,
+        'culturalRelevance': culturalRelevance,
+        'learningObjectives': learningObjectives,
+        'architecturalStyle': architecturalStyle,
+        'categories': categories,
+      };
 
-  factory EducationalInfo.fromJson(Map<String, dynamic> json) => EducationalInfo(
-    facts: (json['facts'] as List<dynamic>?)?.cast<String>() ?? [],
-    importance: json['importance'] as String,
-    culturalRelevance: json['culturalRelevance'] as String,
-    learningObjectives: (json['learningObjectives'] as List<dynamic>?)?.cast<String>() ?? [],
-    architecturalStyle: json['architecturalStyle'] as String?,
-    categories: (json['categories'] as List<dynamic>?)?.cast<String>() ?? [],
-  );
+  factory EducationalInfo.fromJson(Map<String, dynamic> json) =>
+      EducationalInfo(
+        facts: (json['facts'] as List<dynamic>?)?.cast<String>() ?? [],
+        importance: json['importance'] as String,
+        culturalRelevance: json['culturalRelevance'] as String,
+        learningObjectives:
+            (json['learningObjectives'] as List<dynamic>?)?.cast<String>() ??
+                [],
+        architecturalStyle: json['architecturalStyle'] as String?,
+        categories:
+            (json['categories'] as List<dynamic>?)?.cast<String>() ?? [],
+      );
 }
 
 /// Enhanced Destination data model for dynamic recommendations
@@ -110,7 +115,7 @@ class Destination {
   final double? rating;
   final List<String> tags;
   final bool isFavorite;
-  
+
   // Enhanced fields for dynamic recommendations
   final String type; // monument, museum, park, etc.
   final GeoCoordinates? coordinates;
@@ -218,19 +223,23 @@ class Destination {
       tags: (json['tags'] as List<dynamic>?)?.cast<String>() ?? [],
       isFavorite: json['isFavorite'] as bool? ?? false,
       type: json['type'] as String? ?? 'attraction',
-      coordinates: json['coordinates'] != null 
+      coordinates: json['coordinates'] != null
           ? GeoCoordinates.fromJson(json['coordinates'] as Map<String, dynamic>)
           : null,
       distanceKm: (json['distanceKm'] as num?)?.toDouble(),
       historicalInfo: json['historicalInfo'] != null
-          ? HistoricalInfo.fromJson(json['historicalInfo'] as Map<String, dynamic>)
+          ? HistoricalInfo.fromJson(
+              json['historicalInfo'] as Map<String, dynamic>)
           : null,
       educationalInfo: json['educationalInfo'] != null
-          ? EducationalInfo.fromJson(json['educationalInfo'] as Map<String, dynamic>)
+          ? EducationalInfo.fromJson(
+              json['educationalInfo'] as Map<String, dynamic>)
           : null,
       images: (json['images'] as List<dynamic>?)?.cast<String>() ?? [],
-      createdAt: json['createdAt'] != null ? _parseDateTime(json['createdAt']) : null,
-      updatedAt: json['updatedAt'] != null ? _parseDateTime(json['updatedAt']) : null,
+      createdAt:
+          json['createdAt'] != null ? _parseDateTime(json['createdAt']) : null,
+      updatedAt:
+          json['updatedAt'] != null ? _parseDateTime(json['updatedAt']) : null,
       isOfflineAvailable: json['isOfflineAvailable'] as bool? ?? false,
     );
   }
@@ -238,11 +247,11 @@ class Destination {
   /// Helper method to parse DateTime from various formats (int timestamp or Firestore Timestamp)
   static DateTime? _parseDateTime(dynamic value) {
     if (value == null) return null;
-    
+
     if (value is int) {
       return DateTime.fromMillisecondsSinceEpoch(value);
     }
-    
+
     // Handle Firestore Timestamp
     if (value.runtimeType.toString() == 'Timestamp') {
       try {
@@ -252,11 +261,11 @@ class Destination {
         return null;
       }
     }
-    
+
     if (value is DateTime) {
       return value;
     }
-    
+
     // Try parsing as string
     if (value is String) {
       try {
@@ -266,7 +275,7 @@ class Destination {
         return null;
       }
     }
-    
+
     print('Unhandled DateTime type: ${value.runtimeType}');
     return null;
   }

@@ -22,9 +22,10 @@ class DestinationDetailPage extends StatefulWidget {
 }
 
 class _DestinationDetailPageState extends State<DestinationDetailPage> {
-  final EnhancedOfflineStorageService _offlineStorage = EnhancedOfflineStorageService();
+  final EnhancedOfflineStorageService _offlineStorage =
+      EnhancedOfflineStorageService();
   final FirestoreTravelService _travelService = FirestoreTravelService();
-  
+
   Destination? _destination;
   bool _isLoading = true;
   bool _isOfflineMode = false;
@@ -55,21 +56,21 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
       }
 
       // Try to load from offline storage first
-      _destination = await _offlineStorage.getOfflineDestination(widget.destinationId);
-      
+      _destination =
+          await _offlineStorage.getOfflineDestination(widget.destinationId);
+
       if (_destination != null) {
         setState(() {
           _isOfflineMode = true;
           _isLoading = false;
         });
-        
+
         // Try to update from online in background
         _updateFromOnlineInBackground();
       } else {
         // Load from online
         await _loadFromOnline();
       }
-      
     } catch (e) {
       setState(() {
         _errorMessage = 'Failed to load destination: ${e.toString()}';
@@ -86,15 +87,14 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
         (d) => d.id == widget.destinationId,
         orElse: () => throw Exception('Destination not found'),
       );
-      
+
       // Save to offline storage
       await _saveDestinationOffline(_destination!);
-      
+
       setState(() {
         _isOfflineMode = false;
         _isLoading = false;
       });
-      
     } catch (e) {
       setState(() {
         _errorMessage = 'Failed to load destination online: ${e.toString()}';
@@ -110,7 +110,7 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
         (d) => d.id == widget.destinationId,
         orElse: () => _destination!,
       );
-      
+
       if (updatedDestination.id == widget.destinationId) {
         await _saveDestinationOffline(updatedDestination);
         if (mounted) {
@@ -138,14 +138,15 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
     setState(() {
       _isFavorite = !_isFavorite;
     });
-    
+
     // TODO: Implement favorite persistence
-    _showSnackBar(_isFavorite ? 'Added to favorites' : 'Removed from favorites');
+    _showSnackBar(
+        _isFavorite ? 'Added to favorites' : 'Removed from favorites');
   }
 
   void _shareDestination() {
     if (_destination == null) return;
-    
+
     final shareText = '''
 Check out ${_destination!.title}!
 
@@ -156,14 +157,14 @@ ${_destination!.historicalInfo?.briefDescription ?? ''}
 
 Shared from VistaGuide
     ''';
-    
+
     Clipboard.setData(ClipboardData(text: shareText));
     _showSnackBar('Destination info copied to clipboard');
   }
 
   void _getDirections() {
     if (_destination == null) return;
-    
+
     // TODO: Implement directions using Magic Lane routing
     _showSnackBar('Directions feature coming soon');
   }
@@ -242,7 +243,7 @@ Shared from VistaGuide
 
   Widget _buildContent() {
     if (_destination == null) return const SizedBox();
-    
+
     return CustomScrollView(
       slivers: [
         _buildHeroSection(),
@@ -299,7 +300,8 @@ Shared from VistaGuide
                 ? Image.network(
                     _destination!.imageUrl!,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => _buildPlaceholderImage(),
+                    errorBuilder: (context, error, stackTrace) =>
+                        _buildPlaceholderImage(),
                   )
                 : _buildPlaceholderImage(),
             Container(
@@ -319,7 +321,8 @@ Shared from VistaGuide
                 top: 100,
                 right: 16,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.green.withOpacity(0.9),
                     borderRadius: BorderRadius.circular(12),
@@ -360,11 +363,25 @@ Shared from VistaGuide
       margin: const EdgeInsets.all(16),
       child: Row(
         children: [
-          Expanded(child: _buildInfoCard('Distance', _destination!.distanceKm != null ? '${_destination!.distanceKm!.toStringAsFixed(1)} km' : 'Unknown', Icons.near_me)),
+          Expanded(
+              child: _buildInfoCard(
+                  'Distance',
+                  _destination!.distanceKm != null
+                      ? '${_destination!.distanceKm!.toStringAsFixed(1)} km'
+                      : 'Unknown',
+                  Icons.near_me)),
           const SizedBox(width: 8),
-          Expanded(child: _buildInfoCard('Type', _destination!.type, Icons.category)),
+          Expanded(
+              child:
+                  _buildInfoCard('Type', _destination!.type, Icons.category)),
           const SizedBox(width: 8),
-          Expanded(child: _buildInfoCard('Rating', (_destination!.rating ?? 0) > 0 ? '${_destination!.rating!.toStringAsFixed(1)}/5' : 'Unrated', Icons.star)),
+          Expanded(
+              child: _buildInfoCard(
+                  'Rating',
+                  (_destination!.rating ?? 0) > 0
+                      ? '${_destination!.rating!.toStringAsFixed(1)}/5'
+                      : 'Unrated',
+                  Icons.star)),
         ],
       ),
     );
@@ -414,9 +431,9 @@ Shared from VistaGuide
 
   Widget _buildHistoricalSection() {
     if (_destination!.historicalInfo == null) return const SizedBox();
-    
+
     final historical = _destination!.historicalInfo!;
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Card(
@@ -468,12 +485,15 @@ Shared from VistaGuide
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
-                      children: historical.relatedFigures.map(
-                        (figure) => Chip(
-                          label: Text(figure),
-                          backgroundColor: AppColors.primary.withOpacity(0.1),
-                        ),
-                      ).toList(),
+                      children: historical.relatedFigures
+                          .map(
+                            (figure) => Chip(
+                              label: Text(figure),
+                              backgroundColor:
+                                  AppColors.primary.withOpacity(0.1),
+                            ),
+                          )
+                          .toList(),
                     ),
                   ],
                 ],
@@ -487,9 +507,9 @@ Shared from VistaGuide
 
   Widget _buildEducationalSection() {
     if (_destination!.educationalInfo == null) return const SizedBox();
-    
+
     final educational = _destination!.educationalInfo!;
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Card(
@@ -569,7 +589,7 @@ Shared from VistaGuide
                   const Icon(Icons.location_on, color: Colors.grey),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(_destination!.coordinates != null 
+                    child: Text(_destination!.coordinates != null
                         ? 'Lat: ${_destination!.coordinates!.latitude.toStringAsFixed(4)}, Lng: ${_destination!.coordinates!.longitude.toStringAsFixed(4)}'
                         : 'Location not available'),
                   ),
@@ -581,7 +601,7 @@ Shared from VistaGuide
                   const Icon(Icons.my_location, color: Colors.grey),
                   const SizedBox(width: 8),
                   Text(
-                    _destination!.coordinates != null 
+                    _destination!.coordinates != null
                         ? '${_destination!.coordinates!.latitude.toStringAsFixed(6)}, ${_destination!.coordinates!.longitude.toStringAsFixed(6)}'
                         : 'Coordinates not available',
                     style: TextStyle(color: Colors.grey[600]),

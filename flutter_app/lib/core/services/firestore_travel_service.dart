@@ -311,7 +311,7 @@ class FirestoreTravelService {
         userPreferences,
       );
       destinations.addAll(firestoreDestinations);
-      
+
       // If we need more results, try Magic Lane API for additional places
       if (destinations.length < limit && useGooglePlaces) {
         try {
@@ -338,8 +338,7 @@ class FirestoreTravelService {
 
           destinations.addAll(magicLaneDestinations);
         } catch (e) {
-          print(
-              '⚠️ Magic Lane API failed, using Firestore data only: $e');
+          print('⚠️ Magic Lane API failed, using Firestore data only: $e');
         }
       }
 

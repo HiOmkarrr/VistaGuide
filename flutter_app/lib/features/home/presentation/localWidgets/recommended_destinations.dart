@@ -8,7 +8,8 @@ import 'destination_card.dart';
 
 /// Enhanced recommended destinations section widget with dynamic loading and offline support
 class RecommendedDestinations extends StatefulWidget {
-  final Function(String destinationId, Destination destination)? onDestinationTap;
+  final Function(String destinationId, Destination destination)?
+      onDestinationTap;
   final Function(Destination destination)? onLandmarkDetected;
   final String sectionTitle;
   final int limit;
@@ -26,20 +27,21 @@ class RecommendedDestinations extends StatefulWidget {
   });
 
   @override
-  State<RecommendedDestinations> createState() => _RecommendedDestinationsState();
+  State<RecommendedDestinations> createState() =>
+      _RecommendedDestinationsState();
 }
 
 class _RecommendedDestinationsState extends State<RecommendedDestinations> {
   final FirestoreTravelService _travelService = FirestoreTravelService();
   final Location _location = Location();
-  
+
   List<Destination> _destinations = [];
   bool _isLoading = true;
   bool _isOfflineMode = false;
   String? _errorMessage;
   String _loadingMessage = 'Initializing...';
   LocationData? _currentLocation;
-  
+
   // Cache management
   static DateTime? _lastUpdated;
   static List<Destination>? _cachedDestinations;
@@ -54,8 +56,8 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
   /// Load recommendations based on user location and preferences
   Future<void> _loadRecommendations() async {
     // Check if we have cached data that's still valid
-    if (_cachedDestinations != null && 
-        _lastUpdated != null && 
+    if (_cachedDestinations != null &&
+        _lastUpdated != null &&
         DateTime.now().difference(_lastUpdated!) < _cacheInterval) {
       setState(() {
         _destinations = _cachedDestinations!;
@@ -78,7 +80,7 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
       }
 
       setState(() {
-        _loadingMessage = _currentLocation != null 
+        _loadingMessage = _currentLocation != null
             ? 'Finding destinations near you...'
             : 'Loading curated recommendations...';
       });
@@ -98,7 +100,7 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
             limit: widget.limit,
             preferredTypes: widget.preferredTypes,
           );
-          
+
           // Cache for offline use
           await OfflineCacheService.cacheDestinations(destinations);
           await OfflineCacheService.cacheUserLocation(
@@ -107,14 +109,14 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
           );
         } else {
           // Fallback to general recommendations
-          destinations = await _travelService.getDestinations(limit: widget.limit);
+          destinations =
+              await _travelService.getDestinations(limit: widget.limit);
         }
-        
+
         setState(() {
           _isOfflineMode = false;
           _loadingMessage = 'Finalizing recommendations...';
         });
-        
       } catch (e) {
         // Fallback to offline recommendations
         print('⚠️ Online recommendations failed, trying offline: $e');
@@ -122,7 +124,7 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
           _loadingMessage = 'Loading offline recommendations...';
         });
         destinations = await _loadOfflineRecommendations();
-        
+
         setState(() {
           _isOfflineMode = true;
         });
@@ -132,12 +134,11 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
         _destinations = destinations;
         _isLoading = false;
         _loadingMessage = '';
-        
+
         // Cache the new data
         _cachedDestinations = destinations;
         _lastUpdated = DateTime.now();
       });
-
     } catch (e) {
       setState(() {
         _errorMessage = 'Failed to load recommendations: ${e.toString()}';
@@ -153,7 +154,7 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
       setState(() {
         _loadingMessage = 'Checking location services...';
       });
-      
+
       bool serviceEnabled = await _location.serviceEnabled();
       if (!serviceEnabled) {
         setState(() {
@@ -166,7 +167,7 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
       setState(() {
         _loadingMessage = 'Checking location permission...';
       });
-      
+
       PermissionStatus permissionGranted = await _location.hasPermission();
       if (permissionGranted == PermissionStatus.denied) {
         setState(() {
@@ -202,17 +203,18 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
     setState(() {
       _loadingMessage = 'Loading cached destinations...';
     });
-    
-    final cachedDestinations = await OfflineCacheService.getCachedDestinations();
-    
+
+    final cachedDestinations =
+        await OfflineCacheService.getCachedDestinations();
+
     if (cachedDestinations.isNotEmpty) {
       return cachedDestinations.take(widget.limit).toList();
     }
-    
+
     setState(() {
       _loadingMessage = 'Fetching offline recommendations...';
     });
-    
+
     // Last resort: try offline destinations from Firestore
     return await _travelService.getOfflineRecommendations(limit: widget.limit);
   }
@@ -241,7 +243,8 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
               ),
               if (_isOfflineMode)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.orange.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
@@ -266,7 +269,7 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
               // Refresh button
               IconButton(
                 onPressed: _isLoading ? null : _refreshRecommendations,
-                icon: _isLoading 
+                icon: _isLoading
                     ? const SizedBox(
                         width: 20,
                         height: 20,
@@ -278,7 +281,7 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
             ],
           ),
         ),
-        
+
         // Content
         if (_isLoading && _destinations.isEmpty)
           _buildLoadingState()
@@ -305,12 +308,12 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
             ),
             SizedBox(height: 16),
             Text(
-              _loadingMessage.isNotEmpty 
-                  ? _loadingMessage 
+              _loadingMessage.isNotEmpty
+                  ? _loadingMessage
                   : 'Loading personalized recommendations...',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
+                    color: Colors.grey[600],
+                  ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -399,10 +402,12 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
                 destination: destination,
                 cardHeight: cardHeight,
                 onTap: widget.onDestinationTap != null
-                    ? () => widget.onDestinationTap!(destination.id, destination)
+                    ? () =>
+                        widget.onDestinationTap!(destination.id, destination)
                     : null,
                 showDistance: destination.distanceKm != null,
-                isOfflineAvailable: destination.isOfflineAvailable || _isOfflineMode,
+                isOfflineAvailable:
+                    destination.isOfflineAvailable || _isOfflineMode,
               );
             },
           ),
