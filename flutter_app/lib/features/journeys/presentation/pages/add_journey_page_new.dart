@@ -112,19 +112,10 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
 
   /// Build basic journey information card
   Widget _buildBasicInfoCard() {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -260,19 +251,10 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
 
   /// Build journey route card with source, destination, and intermediate stops
   Widget _buildRouteCard() {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -641,19 +623,10 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
 
   /// Build travel dates card
   Widget _buildDatesCard() {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -848,26 +821,21 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
 
     try {
       // Create journey object
-      final destinationNames = <String>[
-        _sourceLocation!.title,
-        ..._intermediateStops.map((stop) => stop.title),
-        _destinationLocation!.title,
-      ];
-
       final journey = Journey(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
+        sourceLocation: _sourceLocation!,
+        destinationLocation: _destinationLocation!,
+        intermediateStops: _intermediateStops,
         startDate: _startDate!,
         endDate: _endDate!,
-        isCompleted: false,
-        destinations: destinationNames,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
 
       // Save journey
-      _journeyService.addJourney(journey);
+      await _journeyService.createJourney(journey);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

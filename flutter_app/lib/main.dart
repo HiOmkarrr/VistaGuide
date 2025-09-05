@@ -53,7 +53,7 @@ void main() async {
           '🔍 DEBUG: MAGIC_LANE_API_KEY exists: ${dotenv.env.containsKey("MAGIC_LANE_API_KEY")}');
     }
     MagicLaneService.initialize();
-    print('✅ Magic Lane API initialized');
+    print('✅ Magic Lane API initialized (includes location autocomplete)');
   } catch (e) {
     print('⚠️ Magic Lane API initialization failed: $e');
   }

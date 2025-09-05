@@ -138,6 +138,46 @@ class FirestoreTravelService {
     }
   }
 
+  /// Search destinations by location name using both Firestore and Magic Lane
+  Future<List<Destination>> searchDestinationsByLocation(String locationQuery,
+      {int limit = 20}) async {
+    try {
+      print('🔍 Searching destinations for location: "$locationQuery"');
+
+      final destinations = <Destination>[];
+
+      // First, search in Firestore destinations
+      final firestoreResults =
+          await searchDestinations(locationQuery, limit: limit);
+      destinations.addAll(firestoreResults);
+
+      // If we need more results, try Magic Lane API
+      if (destinations.length < limit) {
+        try {
+          final magicLaneResults = await MagicLaneService.searchPlacesByText(
+            query: locationQuery,
+            maxResults: limit - destinations.length,
+          );
+
+          // Store new destinations found via Magic Lane
+          if (magicLaneResults.isNotEmpty) {
+            await _storeMagicLaneDestinations(magicLaneResults);
+            destinations.addAll(magicLaneResults);
+          }
+        } catch (e) {
+          print('⚠️ Magic Lane search failed: $e');
+        }
+      }
+
+      // Remove duplicates and return
+      final uniqueDestinations = _deduplicateDestinations(destinations);
+      return uniqueDestinations.take(limit).toList();
+    } catch (e) {
+      print('❌ Error searching destinations by location: $e');
+      throw Exception('Failed to search destinations by location: $e');
+    }
+  }
+
   /// Get destinations by tags
   Future<List<Destination>> getDestinationsByTags(List<String> tags,
       {int limit = 20}) async {

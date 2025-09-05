@@ -193,24 +193,56 @@ class MagicLaneService {
         body: jsonEncode(payload),
       );
 
+      print('🔍 MagicLane: Response status ${response.statusCode}');
+      print(
+          '🔍 MagicLane: Response body: ${response.body.substring(0, min(500, response.body.length))}');
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        print('🔍 MagicLane: Parsed response data keys: ${data.keys.toList()}');
 
-        if (data['success'] == true) {
-          final List<dynamic> places = data['data']['places'] ?? [];
+        // Try different response formats
+        List<dynamic> places = [];
 
-          final destinations = <Destination>[];
+        if (data['results'] != null) {
+          places = data['results'];
+          print('🔍 MagicLane: Found ${places.length} places in results');
+        } else if (data['data'] != null && data['data']['places'] != null) {
+          places = data['data']['places'];
+          print('🔍 MagicLane: Found ${places.length} places in data.places');
+        } else if (data['places'] != null) {
+          places = data['places'];
+          print('🔍 MagicLane: Found ${places.length} places in places');
+        } else if (data is List) {
+          places = data;
+          print(
+              '🔍 MagicLane: Response is direct array with ${places.length} places');
+        }
 
-          for (final place in places) {
-            final destination =
-                _convertMagicLaneToDestination(place, latitude, longitude);
-            if (destination != null) {
-              destinations.add(destination);
-            }
+        final destinations = <Destination>[];
+
+        for (final place in places) {
+          print(
+              '🔍 MagicLane: Processing place: ${place.runtimeType} - ${place.toString().substring(0, min(200, place.toString().length))}');
+
+          // Try both conversion methods
+          Destination? destination =
+              _convertMagicLaneToDestination(place, latitude, longitude);
+          if (destination == null) {
+            destination =
+                await _convertPlaceToDestination(place, latitude, longitude);
           }
 
-          return destinations;
+          if (destination != null) {
+            destinations.add(destination);
+            print('✅ MagicLane: Successfully converted: ${destination.title}');
+          } else {
+            print('❌ MagicLane: Failed to convert place');
+          }
         }
+
+        print('✅ MagicLane: Returning ${destinations.length} destinations');
+        return destinations;
       }
 
       return [];
@@ -364,25 +396,88 @@ class MagicLaneService {
     double? userLng,
   ) {
     try {
-      final String placeId = place['id']?.toString() ?? '';
-      final String name = place['name'] ?? 'Unknown Place';
-      final String address = place['address']?.toString() ?? '';
-      final double? rating = (place['rating'] as num?)?.toDouble();
-      final List<dynamic> categories = place['categories'] ?? [];
+      print('🔍 Converting place: ${place.keys.toList()}');
 
-      // Get coordinates
-      final location = place['location'];
+      // Handle different field names
+      final String placeId = place['id']?.toString() ??
+          place['place_id']?.toString() ??
+          (place['name']?.toString())?.replaceAll(' ', '_').toLowerCase() ??
+          DateTime.now().millisecondsSinceEpoch.toString();
+
+      final String name = place['name']?.toString() ??
+          place['title']?.toString() ??
+          place['display_name']?.toString() ??
+          'Unknown Place';
+
+      // Handle different address formats
+      String address = '';
+      if (place['address'] != null) {
+        if (place['address'] is String) {
+          address = place['address'];
+        } else if (place['address'] is Map) {
+          final addressMap = place['address'] as Map<String, dynamic>;
+          final parts = <String>[];
+
+          // Try common address fields
+          ['city', 'town', 'village', 'state', 'country', 'settlement']
+              .forEach((field) {
+            if (addressMap[field] != null) {
+              parts.add(addressMap[field].toString());
+            }
+          });
+
+          address = parts.join(', ');
+        }
+      } else if (place['formatted_address'] != null) {
+        address = place['formatted_address'].toString();
+      } else if (place['display_name'] != null) {
+        address = place['display_name'].toString();
+      }
+
+      final double? rating = (place['rating'] as num?)?.toDouble();
+      final List<dynamic> categories =
+          place['categories'] ?? place['types'] ?? [];
+
+      // Get coordinates - try multiple formats
       GeoCoordinates? coordinates;
       double? distance;
 
-      if (location != null) {
-        final lat = (location['lat'] as num).toDouble();
-        final lng = (location['lng'] as num).toDouble();
+      // Format 1: location object with lat/lng
+      if (place['location'] != null) {
+        final location = place['location'];
+        if (location['lat'] != null && location['lng'] != null) {
+          final lat = (location['lat'] as num).toDouble();
+          final lng = (location['lng'] as num).toDouble();
+          coordinates = GeoCoordinates(latitude: lat, longitude: lng);
+
+          if (userLat != null && userLng != null) {
+            distance = _calculateDistance(userLat, userLng, lat, lng);
+          }
+        }
+      }
+
+      // Format 2: direct lat/lng fields
+      if (coordinates == null && place['lat'] != null && place['lng'] != null) {
+        final lat = (place['lat'] as num).toDouble();
+        final lng = (place['lng'] as num).toDouble();
         coordinates = GeoCoordinates(latitude: lat, longitude: lng);
 
-        // Calculate distance if user location provided
         if (userLat != null && userLng != null) {
           distance = _calculateDistance(userLat, userLng, lat, lng);
+        }
+      }
+
+      // Format 3: coordinates array [lng, lat] (Magic Lane format)
+      if (coordinates == null && place['coordinates'] != null) {
+        final coords = place['coordinates'];
+        if (coords is List && coords.length >= 2) {
+          final lng = (coords[0] as num).toDouble();
+          final lat = (coords[1] as num).toDouble();
+          coordinates = GeoCoordinates(latitude: lat, longitude: lng);
+
+          if (userLat != null && userLng != null) {
+            distance = _calculateDistance(userLat, userLng, lat, lng);
+          }
         }
       }
 
@@ -392,11 +487,16 @@ class MagicLaneService {
 
       // Get photos
       List<String> images = [];
-      final List<dynamic>? photos = place['images'];
+      final List<dynamic>? photos = place['images'] ?? place['photos'];
       if (photos != null && photos.isNotEmpty) {
         images = photos
-            .where((photo) => photo['url'] != null)
-            .map<String>((photo) => photo['url'].toString())
+            .where((photo) =>
+                photo['url'] != null || photo['photo_reference'] != null)
+            .map<String>((photo) =>
+                photo['url']?.toString() ??
+                photo['photo_reference']?.toString() ??
+                '')
+            .where((url) => url.isNotEmpty)
             .take(5)
             .toList();
       }
@@ -405,7 +505,8 @@ class MagicLaneService {
       HistoricalInfo? historicalInfo;
       EducationalInfo? educationalInfo;
 
-      final description = place['description']?.toString();
+      final description =
+          place['description']?.toString() ?? place['vicinity']?.toString();
       final historicalData = place['historical_info'];
       final educationalData = place['educational_info'];
 
@@ -434,10 +535,13 @@ class MagicLaneService {
         );
       }
 
+      print(
+          '✅ Successfully created destination: $name at ${coordinates?.latitude}, ${coordinates?.longitude}');
+
       return Destination(
         id: placeId,
         title: name,
-        subtitle: address,
+        subtitle: address.isNotEmpty ? address : 'Location',
         imageUrl: images.isNotEmpty ? images.first : null,
         description: description,
         rating: rating,

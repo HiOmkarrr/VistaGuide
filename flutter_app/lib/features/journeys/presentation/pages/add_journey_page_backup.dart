@@ -8,7 +8,7 @@ import '../../../../core/services/location_weather_service.dart';
 import '../../data/services/journey_service.dart';
 import '../../data/models/journey.dart';
 
-/// Page for adding a new journey with modern UI
+/// Page for adding a new journey
 class AddJourneyPage extends StatefulWidget {
   const AddJourneyPage({super.key});
 
@@ -88,15 +88,15 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
                 // Header section with journey basic info
                 _buildBasicInfoCard(),
                 const SizedBox(height: 20),
-
+                
                 // Journey route section
                 _buildRouteCard(),
                 const SizedBox(height: 20),
-
+                
                 // Travel dates section
                 _buildDatesCard(),
                 const SizedBox(height: 32),
-
+                
                 // Create button
                 _buildCreateButton(),
                 const SizedBox(height: 16),
@@ -112,19 +112,10 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
 
   /// Build basic journey information card
   Widget _buildBasicInfoCard() {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -155,7 +146,7 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
               ],
             ),
             const SizedBox(height: 20),
-
+            
             // Journey Title
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,8 +174,7 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          BorderSide(color: AppColors.primary, width: 2),
+                      borderSide: BorderSide(color: AppColors.primary, width: 2),
                     ),
                     filled: true,
                     fillColor: AppColors.surface,
@@ -202,9 +192,9 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
                 ),
               ],
             ),
-
+            
             const SizedBox(height: 20),
-
+            
             // Description
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -233,8 +223,7 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide:
-                          BorderSide(color: AppColors.primary, width: 2),
+                      borderSide: BorderSide(color: AppColors.primary, width: 2),
                     ),
                     filled: true,
                     fillColor: AppColors.surface,
@@ -260,19 +249,10 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
 
   /// Build journey route card with source, destination, and intermediate stops
   Widget _buildRouteCard() {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.white,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -283,12 +263,12 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: AppColors.secondary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Icon(
                     Icons.route,
-                    color: Colors.blue,
+                    color: AppColors.secondary,
                     size: 20,
                   ),
                 ),
@@ -302,11 +282,11 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-
+            const SizedBox(height: 20),
+            
             // Source location
             _buildLocationInput(
-              label: 'Starting Point',
+              label: 'From (Starting Point)',
               icon: Icons.my_location,
               iconColor: Colors.green,
               location: _sourceLocation,
@@ -322,13 +302,13 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
               },
               isRequired: true,
             ),
-
+            
             // Route line and intermediate stops
             _buildIntermediateStopsSection(),
-
+            
             // Destination location
             _buildLocationInput(
-              label: 'Destination',
+              label: 'To (Destination)',
               icon: Icons.location_on,
               iconColor: Colors.red,
               location: _destinationLocation,
@@ -349,15 +329,58 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
       ),
     );
   }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Journey Locations',
+          style: AppTextStyles.h4.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 16),
 
-  /// Build individual location input with modern design
-  Widget _buildLocationInput({
+        // Source Location
+        _buildLocationFieldSection(
+          label: 'From (Source)',
+          hintText: 'Enter starting location',
+          selectedLocation: _sourceLocation,
+          onLocationSelected: (location) {
+            setState(() {
+              _sourceLocation = location;
+            });
+          },
+          isRequired: true,
+        ),
+
+        const SizedBox(height: 16),
+
+        // Destination Location
+        _buildLocationFieldSection(
+          label: 'To (Destination)',
+          hintText: 'Enter destination location',
+          selectedLocation: _destinationLocation,
+          onLocationSelected: (location) {
+            setState(() {
+              _destinationLocation = location;
+            });
+          },
+          isRequired: true,
+        ),
+
+        const SizedBox(height: 16),
+
+        // Intermediate Stops
+        _buildIntermediateStopsSection(),
+      ],
+    );
+  }
+
+  Widget _buildLocationFieldSection({
     required String label,
-    required IconData icon,
-    required Color iconColor,
-    required LocationSuggestion? location,
+    required String hintText,
+    required LocationSuggestion? selectedLocation,
     required Function(LocationSuggestion) onLocationSelected,
-    required VoidCallback onRemove,
     required bool isRequired,
   }) {
     return Column(
@@ -365,13 +388,10 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
       children: [
         Row(
           children: [
-            Icon(icon, color: iconColor, size: 20),
-            const SizedBox(width: 8),
             Text(
               label,
               style: AppTextStyles.bodyMedium.copyWith(
                 fontWeight: FontWeight.w500,
-                color: AppColors.textPrimary,
               ),
             ),
             if (isRequired)
@@ -387,49 +407,43 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            border: location == null
+            border: selectedLocation == null
                 ? Border.all(color: AppColors.grey300)
-                : Border.all(
-                    color: AppColors.primary.withOpacity(0.5), width: 1.5),
+                : Border.all(color: AppColors.primary.withOpacity(0.3)),
             borderRadius: BorderRadius.circular(12),
-            color: location == null
-                ? AppColors.surface
-                : Colors.blue.withOpacity(0.02),
+            color: Colors.white,
           ),
-          child: location != null
-              ? _buildSelectedLocationTile(location, onRemove, iconColor)
+          child: selectedLocation != null
+              ? _buildSelectedLocationTile(selectedLocation, () {
+                  if (label.contains('Source')) {
+                    setState(() => _sourceLocation = null);
+                  } else {
+                    setState(() => _destinationLocation = null);
+                  }
+                })
               : LocationAutocompleteSearchBar(
-                  hintText: 'Enter $label',
+                  hintText: hintText,
                   userLatitude: _userLatitude,
                   userLongitude: _userLongitude,
                   onLocationSelected: onLocationSelected,
                 ),
         ),
-        const SizedBox(height: 16),
       ],
     );
   }
 
-  /// Build selected location tile with modern design
   Widget _buildSelectedLocationTile(
-      LocationSuggestion location, VoidCallback onRemove, Color iconColor) {
+      LocationSuggestion location, VoidCallback onRemove) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Icon(
-              Icons.location_on,
-              color: iconColor,
-              size: 16,
-            ),
+          Icon(
+            Icons.location_on,
+            color: AppColors.primary,
+            size: 20,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -438,29 +452,22 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
                   location.title,
                   style: AppTextStyles.bodyMedium.copyWith(
                     fontWeight: FontWeight.w500,
-                    color: AppColors.textPrimary,
                   ),
                 ),
-                if (location.subtitle.isNotEmpty) ...[
-                  const SizedBox(height: 2),
+                if (location.subtitle.isNotEmpty)
                   Text(
                     location.subtitle,
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
                   ),
-                ],
               ],
             ),
           ),
           IconButton(
             onPressed: onRemove,
-            icon: Icon(
-              Icons.close,
-              size: 20,
-              color: AppColors.textSecondary,
-            ),
-            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            icon: const Icon(Icons.close, size: 18),
+            constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
             padding: EdgeInsets.zero,
           ),
         ],
@@ -468,248 +475,118 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
     );
   }
 
-  /// Build intermediate stops section with route visualization
   Widget _buildIntermediateStopsSection() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Route line before intermediate stops
-        if (_intermediateStops.isNotEmpty || true) // Always show line
-          _buildRouteLine(),
+        Row(
+          children: [
+            Text(
+              'Intermediate Stops',
+              style: AppTextStyles.bodyMedium.copyWith(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '(Optional)',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
 
-        // Existing intermediate stops
+        // Show existing intermediate stops
         ..._intermediateStops.asMap().entries.map((entry) {
           final index = entry.key;
           final stop = entry.value;
-          return Column(
-            children: [
-              _buildIntermediateStopTile(stop, index + 1, () {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.white,
+              ),
+              child: _buildSelectedLocationTile(stop, () {
                 setState(() {
                   _intermediateStops.removeAt(index);
                 });
               }),
-              if (index < _intermediateStops.length - 1) _buildRouteLine(),
-            ],
+            ),
           );
         }),
 
-        // Add intermediate stop button
-        if (_intermediateStops.length < 5) _buildAddStopButton(),
-
-        // Route line after intermediate stops
-        _buildRouteLine(),
-      ],
-    );
-  }
-
-  /// Build route connecting line
-  Widget _buildRouteLine() {
-    return Container(
-      width: 2,
-      height: 20,
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.grey400,
-        borderRadius: BorderRadius.circular(1),
-      ),
-    );
-  }
-
-  /// Build intermediate stop tile with numbering
-  Widget _buildIntermediateStopTile(
-      LocationSuggestion stop, int number, VoidCallback onRemove) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.orange.withOpacity(0.5), width: 1.5),
-        borderRadius: BorderRadius.circular(12),
-        color: Colors.orange.withOpacity(0.02),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: Colors.orange,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(
-                child: Text(
-                  number.toString(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+        // Add new intermediate stop button/field
+        if (_intermediateStops.length < 5) // Limit to 5 intermediate stops
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.grey300),
+              borderRadius: BorderRadius.circular(12),
+              color: Colors.white,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    stop.title,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  if (stop.subtitle.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      stop.subtitle,
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            IconButton(
-              onPressed: onRemove,
-              icon: Icon(
-                Icons.close,
-                size: 20,
-                color: AppColors.textSecondary,
-              ),
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-              padding: EdgeInsets.zero,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Build add intermediate stop button
-  Widget _buildAddStopButton() {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: OutlinedButton.icon(
-        onPressed: () {
-          _showAddStopDialog();
-        },
-        icon: Icon(Icons.add, color: AppColors.primary),
-        label: Text(
-          'Add Intermediate Stop',
-          style: TextStyle(color: AppColors.primary),
-        ),
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(color: AppColors.primary),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        ),
-      ),
-    );
-  }
-
-  /// Show dialog to add intermediate stop
-  void _showAddStopDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Add Intermediate Stop'),
-          content: SizedBox(
-            width: double.maxFinite,
             child: LocationAutocompleteSearchBar(
-              hintText: 'Search for intermediate stop',
+              hintText: 'Add intermediate stop',
               userLatitude: _userLatitude,
               userLongitude: _userLongitude,
               onLocationSelected: (location) {
                 setState(() {
                   _intermediateStops.add(location);
                 });
-                Navigator.of(context).pop();
               },
             ),
           ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+
+        if (_intermediateStops.length >= 5)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              'Maximum 5 intermediate stops allowed',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
           ),
-        );
-      },
+      ],
     );
   }
 
-  /// Build travel dates card
-  Widget _buildDatesCard() {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+  Widget _buildDateSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Travel Dates',
+          style: AppTextStyles.h4.copyWith(
+            fontWeight: FontWeight.w600,
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        const SizedBox(height: 12),
+        Row(
           children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.purple.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    Icons.calendar_today,
-                    color: Colors.purple,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Travel Dates',
-                  style: AppTextStyles.h4.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ],
+            Expanded(
+              child: _buildDateField(
+                label: 'Start Date',
+                date: _startDate,
+                onTap: () => _selectStartDate(),
+              ),
             ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildDateField(
-                    label: 'Start Date',
-                    date: _startDate,
-                    onTap: () => _selectDate(context, true),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildDateField(
-                    label: 'End Date',
-                    date: _endDate,
-                    onTap: () => _selectDate(context, false),
-                  ),
-                ),
-              ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildDateField(
+                label: 'End Date',
+                date: _endDate,
+                onTap: () => _selectEndDate(),
+              ),
             ),
           ],
         ),
-      ),
+      ],
     );
   }
 
-  /// Build individual date field
   Widget _buildDateField({
     required String label,
     required DateTime? date,
@@ -722,35 +599,36 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
           label,
           style: AppTextStyles.bodyMedium.copyWith(
             fontWeight: FontWeight.w500,
-            color: AppColors.textPrimary,
           ),
         ),
         const SizedBox(height: 8),
         InkWell(
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
             decoration: BoxDecoration(
               border: Border.all(color: AppColors.grey300),
               borderRadius: BorderRadius.circular(12),
-              color: AppColors.surface,
+              color: Colors.white,
             ),
             child: Row(
               children: [
                 Icon(
                   Icons.calendar_today,
-                  size: 16,
+                  size: 20,
                   color: AppColors.textSecondary,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  date != null
-                      ? '${date.day}/${date.month}/${date.year}'
-                      : 'Select date',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: date != null
-                        ? AppColors.textPrimary
-                        : AppColors.textHint,
+                Expanded(
+                  child: Text(
+                    date != null
+                        ? '${date.day}/${date.month}/${date.year}'
+                        : 'Select date',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: date != null
+                          ? AppColors.textPrimary
+                          : AppColors.textSecondary,
+                    ),
                   ),
                 ),
               ],
@@ -761,7 +639,6 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
     );
   }
 
-  /// Build create journey button
   Widget _buildCreateButton() {
     return SizedBox(
       width: double.infinity,
@@ -772,9 +649,9 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
           ),
-          elevation: 2,
+          elevation: 0,
         ),
         child: _isLoading
             ? const SizedBox(
@@ -787,7 +664,7 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
               )
             : Text(
                 'Create Journey',
-                style: AppTextStyles.h4.copyWith(
+                style: AppTextStyles.bodyLarge.copyWith(
                   fontWeight: FontWeight.w600,
                   color: Colors.white,
                 ),
@@ -796,49 +673,58 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
     );
   }
 
-  // ==================== HELPER METHODS ====================
-
-  /// Select date using date picker
-  Future<void> _selectDate(BuildContext context, bool isStartDate) async {
-    final DateTime? picked = await showDatePicker(
+  Future<void> _selectStartDate() async {
+    final date = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: _startDate ?? DateTime.now(),
       firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
     );
-    if (picked != null) {
+
+    if (date != null) {
       setState(() {
-        if (isStartDate) {
-          _startDate = picked;
-          // Clear end date if it's before start date
-          if (_endDate != null && _endDate!.isBefore(_startDate!)) {
-            _endDate = null;
-          }
-        } else {
-          _endDate = picked;
+        _startDate = date;
+        // Reset end date if it's before start date
+        if (_endDate != null && _endDate!.isBefore(date)) {
+          _endDate = null;
         }
       });
     }
   }
 
-  /// Create journey with validation
+  Future<void> _selectEndDate() async {
+    final firstDate = _startDate ?? DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: _endDate ?? firstDate,
+      firstDate: firstDate,
+      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+    );
+
+    if (date != null) {
+      setState(() {
+        _endDate = date;
+      });
+    }
+  }
+
   Future<void> _createJourney() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
     if (_sourceLocation == null) {
-      _showError('Please select a starting location');
+      _showErrorDialog('Please select a source location');
       return;
     }
 
     if (_destinationLocation == null) {
-      _showError('Please select a destination');
+      _showErrorDialog('Please select a destination location');
       return;
     }
 
     if (_startDate == null || _endDate == null) {
-      _showError('Please select travel dates');
+      _showErrorDialog('Please select both start and end dates');
       return;
     }
 
@@ -847,13 +733,14 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
     });
 
     try {
-      // Create journey object
-      final destinationNames = <String>[
+      // Create location names list
+      final locations = <String>[
         _sourceLocation!.title,
         ..._intermediateStops.map((stop) => stop.title),
         _destinationLocation!.title,
       ];
 
+      // Create new journey
       final journey = Journey(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         title: _titleController.text.trim(),
@@ -861,30 +748,22 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
         startDate: _startDate!,
         endDate: _endDate!,
         isCompleted: false,
-        destinations: destinationNames,
+        destinations: locations,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
 
-      // Save journey
+      // Add journey to service
       _journeyService.addJourney(journey);
 
+      // Show success and navigate back
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Journey created successfully!'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-        );
-
-        Navigator.of(context).pop(true);
+        _showSuccessDialog();
       }
     } catch (e) {
-      _showError('Failed to create journey: $e');
+      if (mounted) {
+        _showErrorDialog('Failed to create journey. Please try again.');
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -894,19 +773,38 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
     }
   }
 
-  /// Show error message
-  void _showError(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
           ),
-        ),
-      );
-    }
+        ],
+      ),
+    );
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Success'),
+        content: const Text('Journey created successfully!'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close dialog
+              Navigator.of(context).pop(); // Go back to journey list
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 }
