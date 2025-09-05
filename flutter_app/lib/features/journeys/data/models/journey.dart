@@ -1,3 +1,5 @@
+import 'journey_details_data.dart';
+
 /// Journey data model for tracking user's planned and completed trips
 class Journey {
   final String id;
@@ -10,6 +12,7 @@ class Journey {
   final String? imageUrl;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final JourneyDetailsData? journeyDetails;
 
   const Journey({
     required this.id,
@@ -22,6 +25,7 @@ class Journey {
     this.imageUrl,
     this.createdAt,
     this.updatedAt,
+    this.journeyDetails,
   });
 
   /// Create a copy of this journey with updated fields
@@ -36,6 +40,7 @@ class Journey {
     String? imageUrl,
     DateTime? createdAt,
     DateTime? updatedAt,
+    JourneyDetailsData? journeyDetails,
   }) {
     return Journey(
       id: id ?? this.id,
@@ -48,6 +53,7 @@ class Journey {
       imageUrl: imageUrl ?? this.imageUrl,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      journeyDetails: journeyDetails ?? this.journeyDetails,
     );
   }
 
@@ -83,6 +89,7 @@ class Journey {
       'imageUrl': imageUrl,
       'createdAt': createdAt?.millisecondsSinceEpoch,
       'updatedAt': updatedAt?.millisecondsSinceEpoch,
+      'journeyDetails': journeyDetails?.toJson(),
     };
   }
 
@@ -102,6 +109,9 @@ class Journey {
           : null,
       updatedAt: json['updatedAt'] != null
           ? DateTime.fromMillisecondsSinceEpoch(json['updatedAt'] as int)
+          : null,
+      journeyDetails: json['journeyDetails'] != null
+          ? JourneyDetailsData.fromJson(json['journeyDetails'] as Map<String, dynamic>)
           : null,
     );
   }

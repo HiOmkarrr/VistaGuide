@@ -5,8 +5,10 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/services/location_autocomplete_service.dart';
 import '../../../../core/services/location_weather_service.dart';
+import '../../../../core/services/journey_details_generation_service.dart';
 import '../../data/services/journey_service.dart';
 import '../../data/models/journey.dart';
+import '../../data/models/journey_details_data.dart';
 
 /// Page for adding a new journey with modern UI
 class AddJourneyPage extends StatefulWidget {
@@ -19,6 +21,7 @@ class AddJourneyPage extends StatefulWidget {
 class _AddJourneyPageState extends State<AddJourneyPage> {
   final _formKey = GlobalKey<FormState>();
   final _journeyService = JourneyService();
+  final _journeyDetailsService = JourneyDetailsGenerationService();
 
   // Form controllers
   final _titleController = TextEditingController();
@@ -38,6 +41,7 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
   DateTime? _endDate;
 
   bool _isLoading = false;
+  bool _isGeneratingDetails = false;
 
   @override
   void initState() {
@@ -777,13 +781,28 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
           elevation: 2,
         ),
         child: _isLoading
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
+            ? Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    _isGeneratingDetails 
+                        ? 'Generating AI insights...'
+                        : 'Creating journey...',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
               )
             : Text(
                 'Create Journey',
@@ -866,14 +885,24 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
         updatedAt: DateTime.now(),
       );
 
-      // Save journey
+      // Save journey first
       _journeyService.addJourney(journey);
-
+      
+      // Generate journey details using AI and wait for completion
+      final journeyDetails = await _generateJourneyDetails(journey);
+      
       if (mounted) {
+        final message = journeyDetails != null 
+            ? 'Journey created with AI insights!'
+            : 'Journey created with default insights!';
+        final bgColor = journeyDetails != null 
+            ? Colors.green 
+            : Colors.orange;
+            
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Journey created successfully!'),
-            backgroundColor: Colors.green,
+            content: Text(message),
+            backgroundColor: bgColor,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
@@ -883,6 +912,7 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
 
         Navigator.of(context).pop(true);
       }
+      
     } catch (e) {
       _showError('Failed to create journey: $e');
     } finally {
@@ -892,6 +922,55 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
         });
       }
     }
+  }
+
+  /// Generate journey details using AI and update the journey
+  Future<JourneyDetailsData?> _generateJourneyDetails(Journey journey) async {
+    JourneyDetailsData? journeyDetails;
+    
+    try {
+      if (mounted) {
+        setState(() {
+          _isGeneratingDetails = true;
+        });
+      }
+      
+      debugPrint('🤖 Starting AI generation for journey: ${journey.title}');
+      
+      // Generate with timeout to avoid long waits
+      journeyDetails = await _journeyDetailsService
+          .generateJourneyDetails(journey)
+          .timeout(
+            const Duration(seconds: 30),
+            onTimeout: () {
+              debugPrint('⏰ AI generation timed out, using fallback data');
+              return null;
+            },
+          );
+      
+      if (journeyDetails != null) {
+        _journeyService.updateJourneyDetails(journey.id, journeyDetails);
+        debugPrint('✅ AI journey details generated and saved successfully');
+      } else {
+        debugPrint('⚠️ AI generation failed (both package and HTTP methods), using dummy data fallback');
+        // Ensure journey still has details by using dummy data as fallback
+        _journeyService.updateJourneyDetails(journey.id, dummyJourneyDetails);
+        debugPrint('💾 Dummy data fallback saved to journey');
+      }
+      
+    } catch (e) {
+      debugPrint('❌ Error generating journey details: $e');
+      // On exception, also use dummy data as fallback
+      _journeyService.updateJourneyDetails(journey.id, dummyJourneyDetails);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGeneratingDetails = false;
+        });
+      }
+    }
+    
+    return journeyDetails;
   }
 
   /// Show error message

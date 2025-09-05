@@ -14,6 +14,9 @@ dependencies:
 
   # For API calls
   http: ^1.2.0
+  
+  # For Gemini AI integration
+  google_generative_ai: ^0.4.6
 
   # For location services
   location: ^6.0.2

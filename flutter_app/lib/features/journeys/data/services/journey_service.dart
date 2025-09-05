@@ -1,4 +1,5 @@
 import '../models/journey.dart';
+import '../models/journey_details_data.dart';
 
 /// Service to manage journey data and functionality
 class JourneyService {
@@ -90,6 +91,17 @@ class JourneyService {
     if (index != -1) {
       _journeys[index] = _journeys[index].copyWith(
         isCompleted: true,
+        updatedAt: DateTime.now(),
+      );
+    }
+  }
+
+  /// Update journey details (AI-generated content)
+  void updateJourneyDetails(String journeyId, JourneyDetailsData journeyDetails) {
+    final index = _journeys.indexWhere((journey) => journey.id == journeyId);
+    if (index != -1) {
+      _journeys[index] = _journeys[index].copyWith(
+        journeyDetails: journeyDetails,
         updatedAt: DateTime.now(),
       );
     }

@@ -21,3 +21,4 @@
 # IDE settings
 .idea/
 .vscode/
+.env

@@ -5,8 +5,8 @@ import '../../../../core/theme/app_text_styles.dart';
 import '../../data/services/journey_service.dart';
 import '../../data/models/journey.dart';
 import '../localWidgets/journey_detail_tabs/overview_tab.dart';
-import '../localWidgets/journey_detail_tabs/guide_safety_tab.dart';
-import '../localWidgets/journey_detail_tabs/explore_pack_tab.dart';
+import '../localWidgets/journey_detail_tabs/safety_weather_tab.dart';
+import '../localWidgets/journey_detail_tabs/suggestions_packing_tab.dart';
 
 /// Page for viewing journey details
 class JourneyDetailsPage extends StatefulWidget {
@@ -83,8 +83,8 @@ class _JourneyDetailsPageState extends State<JourneyDetailsPage>
               controller: _tabController,
               children: [
                 OverviewTab(journey: _journey!),
-                GuideSafetyTab(journey: _journey!),
-                ExplorePackTab(journey: _journey!),
+                SafetyWeatherTab(journey: _journey!),
+                SuggestionsPackingTab(journey: _journey!),
               ],
             ),
           ),
@@ -170,8 +170,8 @@ class _JourneyDetailsPageState extends State<JourneyDetailsPage>
         dividerColor: Colors.transparent,
         tabs: const [
           Tab(text: 'Overview'),
-          Tab(text: 'Guide & Safety'),
-          Tab(text: 'Explore & Pack'),
+          Tab(text: 'Safety & Weather'),
+          Tab(text: 'Suggestions & Packing'),
         ],
       ),
     );
