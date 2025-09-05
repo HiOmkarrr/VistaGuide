@@ -79,11 +79,12 @@ class SimpleLocationWeatherWidget extends StatelessWidget {
           // Refresh Button
           IconButton(
             onPressed: () {
-              // TODO: Implement refresh functionality
+              // Provide feedback that the main widget should be used
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Location services are initializing...'),
-                  duration: Duration(seconds: 2),
+                  content: Text('Please wait, location services are starting...'),
+                  duration: Duration(seconds: 3),
+                  backgroundColor: Colors.orange,
                 ),
               );
             },
@@ -92,6 +93,7 @@ class SimpleLocationWeatherWidget extends StatelessWidget {
               color: AppColors.textSecondary,
               size: 20,
             ),
+            tooltip: 'Location services starting up',
           ),
         ],
       ),

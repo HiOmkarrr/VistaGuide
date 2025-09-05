@@ -210,12 +210,13 @@ class _LocationWeatherWidgetState extends State<LocationWeatherWidget> {
             size: 20,
             color: AppColors.grey600,
           ),
-          onPressed: _loadLocationAndWeather,
+          onPressed: () => _loadLocationAndWeather(true),
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(
             minWidth: 32,
             minHeight: 32,
           ),
+          tooltip: 'Refresh weather data',
         ),
       ],
     );
@@ -297,12 +298,13 @@ class _LocationWeatherWidgetState extends State<LocationWeatherWidget> {
             size: 20,
             color: AppColors.grey600,
           ),
-          onPressed: _loadLocationAndWeather,
+          onPressed: () => _loadLocationAndWeather(true),
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(
             minWidth: 32,
             minHeight: 32,
           ),
+          tooltip: 'Refresh weather data',
         ),
       ],
     );
@@ -341,12 +343,13 @@ class _LocationWeatherWidgetState extends State<LocationWeatherWidget> {
             size: 20,
             color: AppColors.grey600,
           ),
-          onPressed: _loadLocationAndWeather,
+          onPressed: () => _loadLocationAndWeather(true),
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(
             minWidth: 32,
             minHeight: 32,
           ),
+          tooltip: 'Retry loading weather data',
         ),
       ],
     );

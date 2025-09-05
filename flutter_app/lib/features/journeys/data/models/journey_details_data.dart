@@ -97,6 +97,55 @@ class JourneyDetailsData {
       packingChecklist: (json['packingChecklist'] as List<dynamic>).cast<String>(),
     );
   }
+
+  /// Convert to database map (for SQLite)
+  Map<String, dynamic> toMap(String journeyId) {
+    return {
+      'journey_id': journeyId,
+      'weather_type': weather.type,
+      'weather_temperature': weather.temperature,
+      'weather_best_time': weather.bestTime,
+      'what_to_bring': whatToBring.join('|'), // Use pipe separator
+      'safety_notes': safetyNotes.join('|'),
+      'emergency_medical': emergencyContacts.medical,
+      'emergency_police': emergencyContacts.police,
+      'places_events': placesEvents.map((p) => '${p.name}~~${p.type}').join('|'), // Use ~~ as name-type separator
+      'packing_checklist': packingChecklist.join('|'),
+    };
+  }
+
+  /// Create from database map (for SQLite)
+  factory JourneyDetailsData.fromMap(Map<String, dynamic> map) {
+    return JourneyDetailsData(
+      weather: WeatherInfo(
+        type: map['weather_type'] as String,
+        temperature: map['weather_temperature'] as String,
+        bestTime: map['weather_best_time'] as String,
+      ),
+      whatToBring: (map['what_to_bring'] as String).isEmpty 
+          ? <String>[] 
+          : (map['what_to_bring'] as String).split('|'),
+      safetyNotes: (map['safety_notes'] as String).isEmpty 
+          ? <String>[] 
+          : (map['safety_notes'] as String).split('|'),
+      emergencyContacts: EmergencyContacts(
+        medical: map['emergency_medical'] as String,
+        police: map['emergency_police'] as String,
+      ),
+      placesEvents: (map['places_events'] as String).isEmpty 
+          ? <PlaceEvent>[] 
+          : (map['places_events'] as String).split('|').map((item) {
+              final parts = item.split('~~');
+              return PlaceEvent(
+                name: parts.isNotEmpty ? parts[0] : '',
+                type: parts.length > 1 ? parts[1] : '',
+              );
+            }).toList(),
+      packingChecklist: (map['packing_checklist'] as String).isEmpty 
+          ? <String>[] 
+          : (map['packing_checklist'] as String).split('|'),
+    );
+  }
 }
 
 // Dummy data for UI

@@ -20,13 +20,44 @@ class JourneyPage extends StatefulWidget {
 class _JourneyPageState extends State<JourneyPage> {
   final JourneyService _journeyService = JourneyService();
   int _selectedTabIndex = 0;
+  
+  List<Journey> _allJourneys = [];
+  List<Journey> _upcomingJourneys = [];
+  List<Journey> _completedJourneys = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadJourneys();
+  }
+
+  Future<void> _loadJourneys() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+      
+      final allJourneys = await _journeyService.getAllJourneys();
+      final upcomingJourneys = await _journeyService.getUpcomingJourneys();
+      final completedJourneys = await _journeyService.getCompletedJourneys();
+      
+      setState(() {
+        _allJourneys = allJourneys;
+        _upcomingJourneys = upcomingJourneys;
+        _completedJourneys = completedJourneys;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading journeys: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final allJourneys = _journeyService.getAllJourneys();
-    final upcomingJourneys = _journeyService.getUpcomingJourneys();
-    final completedJourneys = _journeyService.getCompletedJourneys();
-
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const CustomAppBar(
@@ -34,37 +65,42 @@ class _JourneyPageState extends State<JourneyPage> {
         showBackButton: false,
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 8),
-            JourneyTabs(
-              selectedIndex: _selectedTabIndex,
-              onTabSelected: (index) {
-                setState(() {
-                  _selectedTabIndex = index;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            Expanded(
-              child: SingleChildScrollView(
-                child: _buildJourneyList(
-                  allJourneys,
-                  upcomingJourneys,
-                  completedJourneys,
+        child: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
                 ),
+              )
+            : Column(
+                children: [
+                  const SizedBox(height: 8),
+                  JourneyTabs(
+                    selectedIndex: _selectedTabIndex,
+                    onTabSelected: (index) {
+                      setState(() {
+                        _selectedTabIndex = index;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: _buildJourneyList(
+                        _allJourneys,
+                        _upcomingJourneys,
+                        _completedJourneys,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           // Navigate to add journey page and refresh on return
           await context.push(AppRoutes.journeyAdd);
-          setState(() {
-            // This will trigger a rebuild with updated data
-          });
+          // Refresh the journey data
+          await _loadJourneys();
         },
         backgroundColor: AppColors.primary,
         child: const Icon(
@@ -107,9 +143,8 @@ class _JourneyPageState extends State<JourneyPage> {
       onJourneyTap: (journeyId) async {
         // Navigate to journey details page and refresh on return
         await context.push('${AppRoutes.journeyDetails}?id=$journeyId');
-        setState(() {
-          // This will trigger a rebuild with updated data
-        });
+        // Refresh the journey data in case it was modified
+        await _loadJourneys();
       },
       emptyStateMessage: emptyStateMessage,
     );

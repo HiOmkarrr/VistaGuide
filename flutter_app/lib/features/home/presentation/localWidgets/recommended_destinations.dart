@@ -54,9 +54,10 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
   }
 
   /// Load recommendations based on user location and preferences
-  Future<void> _loadRecommendations() async {
-    // Check if we have cached data that's still valid
-    if (_cachedDestinations != null &&
+  Future<void> _loadRecommendations([bool forceRefresh = false]) async {
+    // Check if we have cached data that's still valid (unless forcing refresh)
+    if (!forceRefresh &&
+        _cachedDestinations != null &&
         _lastUpdated != null &&
         DateTime.now().difference(_lastUpdated!) < _cacheInterval) {
       setState(() {
@@ -221,7 +222,7 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
 
   /// Refresh recommendations
   Future<void> _refreshRecommendations() async {
-    await _loadRecommendations();
+    await _loadRecommendations(true);
   }
 
   @override
@@ -270,13 +271,18 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
               IconButton(
                 onPressed: _isLoading ? null : _refreshRecommendations,
                 icon: _isLoading
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                        ),
                       )
                     : const Icon(Icons.refresh),
-                tooltip: 'Refresh recommendations',
+                tooltip: _isLoading 
+                    ? 'Loading recommendations...' 
+                    : 'Refresh recommendations',
               ),
             ],
           ),

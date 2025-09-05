@@ -93,6 +93,22 @@ class Journey {
     };
   }
 
+  /// Convert to database map (for SQLite)
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'start_date': startDate.millisecondsSinceEpoch,
+      'end_date': endDate.millisecondsSinceEpoch,
+      'is_completed': isCompleted ? 1 : 0,
+      'destinations': destinations.join(','), // Store as comma-separated string
+      'image_url': imageUrl,
+      'created_at': createdAt?.millisecondsSinceEpoch,
+      'updated_at': updatedAt?.millisecondsSinceEpoch,
+    };
+  }
+
   /// Create from JSON
   factory Journey.fromJson(Map<String, dynamic> json) {
     return Journey(
@@ -113,6 +129,29 @@ class Journey {
       journeyDetails: json['journeyDetails'] != null
           ? JourneyDetailsData.fromJson(json['journeyDetails'] as Map<String, dynamic>)
           : null,
+    );
+  }
+
+  /// Create from database map (for SQLite)
+  factory Journey.fromMap(Map<String, dynamic> map) {
+    return Journey(
+      id: map['id'] as String,
+      title: map['title'] as String,
+      description: map['description'] as String,
+      startDate: DateTime.fromMillisecondsSinceEpoch(map['start_date'] as int),
+      endDate: DateTime.fromMillisecondsSinceEpoch(map['end_date'] as int),
+      isCompleted: (map['is_completed'] as int) == 1,
+      destinations: (map['destinations'] as String).isEmpty 
+          ? <String>[] 
+          : (map['destinations'] as String).split(','),
+      imageUrl: map['image_url'] as String?,
+      createdAt: map['created_at'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(map['created_at'] as int)
+          : null,
+      updatedAt: map['updated_at'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(map['updated_at'] as int)
+          : null,
+      journeyDetails: null, // Will be loaded separately from journey_details table
     );
   }
 

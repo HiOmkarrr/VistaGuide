@@ -25,6 +25,7 @@ class _JourneyDetailsPageState extends State<JourneyDetailsPage>
     with SingleTickerProviderStateMixin {
   final _journeyService = JourneyService();
   Journey? _journey;
+  bool _isLoading = true;
   late TabController _tabController;
 
   @override
@@ -40,15 +41,44 @@ class _JourneyDetailsPageState extends State<JourneyDetailsPage>
     super.dispose();
   }
 
-  void _loadJourney() {
-    final journey = _journeyService.getJourneyById(widget.journeyId);
-    setState(() {
-      _journey = journey;
-    });
+  Future<void> _loadJourney() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+      
+      final journey = await _journeyService.getJourneyById(widget.journeyId);
+      
+      setState(() {
+        _journey = journey;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading journey: $e');
+      setState(() {
+        _journey = null;
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: const CustomAppBar(
+          title: 'Journey Details',
+          showBackButton: true,
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+          ),
+        ),
+      );
+    }
+    
     if (_journey == null) {
       return Scaffold(
         backgroundColor: AppColors.background,
@@ -262,16 +292,26 @@ class _JourneyDetailsPageState extends State<JourneyDetailsPage>
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              _journeyService.markJourneyAsCompleted(widget.journeyId);
-              Navigator.of(context).pop();
-              _loadJourney(); // Reload to update UI
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Journey marked as completed!'),
-                  backgroundColor: AppColors.success,
-                ),
-              );
+            onPressed: () async {
+              try {
+                await _journeyService.markJourneyAsCompleted(widget.journeyId);
+                Navigator.of(context).pop();
+                await _loadJourney(); // Reload to update UI
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Journey marked as completed!'),
+                    backgroundColor: AppColors.success,
+                  ),
+                );
+              } catch (e) {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error marking journey as completed: $e'),
+                    backgroundColor: AppColors.emergency,
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.success,
@@ -297,16 +337,26 @@ class _JourneyDetailsPageState extends State<JourneyDetailsPage>
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              _journeyService.deleteJourney(widget.journeyId);
-              Navigator.of(context).pop(); // Close dialog
-              Navigator.of(context).pop(); // Go back to journey list
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Journey deleted successfully'),
-                  backgroundColor: AppColors.emergency,
-                ),
-              );
+            onPressed: () async {
+              try {
+                await _journeyService.deleteJourney(widget.journeyId);
+                Navigator.of(context).pop(); // Close dialog
+                Navigator.of(context).pop(); // Go back to journey list
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Journey deleted successfully'),
+                    backgroundColor: AppColors.emergency,
+                  ),
+                );
+              } catch (e) {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error deleting journey: $e'),
+                    backgroundColor: AppColors.emergency,
+                  ),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.emergency,
