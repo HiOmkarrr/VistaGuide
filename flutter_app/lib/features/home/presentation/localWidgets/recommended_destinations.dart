@@ -47,6 +47,12 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
   static List<Destination>? _cachedDestinations;
   static const Duration _cacheInterval = Duration(minutes: 15);
 
+  // Safely call setState only when the widget is still mounted
+  void _safeSetState(VoidCallback fn) {
+    if (!mounted) return;
+    setState(fn);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -60,7 +66,7 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
         _cachedDestinations != null &&
         _lastUpdated != null &&
         DateTime.now().difference(_lastUpdated!) < _cacheInterval) {
-      setState(() {
+      _safeSetState(() {
         _destinations = _cachedDestinations!;
         _isLoading = false;
         _loadingMessage = '';
@@ -69,7 +75,7 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
     }
 
     try {
-      setState(() {
+      _safeSetState(() {
         _isLoading = true;
         _errorMessage = null;
         _loadingMessage = 'Getting your location...';
@@ -80,7 +86,7 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
         await _getCurrentLocation();
       }
 
-      setState(() {
+      _safeSetState(() {
         _loadingMessage = _currentLocation != null
             ? 'Finding destinations near you...'
             : 'Loading curated recommendations...';
@@ -90,7 +96,7 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
 
       // Try to load online recommendations first
       try {
-        setState(() {
+        _safeSetState(() {
           _loadingMessage = 'Personalizing recommendations...';
         });
 
@@ -114,24 +120,24 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
               await _travelService.getDestinations(limit: widget.limit);
         }
 
-        setState(() {
+        _safeSetState(() {
           _isOfflineMode = false;
           _loadingMessage = 'Finalizing recommendations...';
         });
       } catch (e) {
         // Fallback to offline recommendations
         print('⚠️ Online recommendations failed, trying offline: $e');
-        setState(() {
+        _safeSetState(() {
           _loadingMessage = 'Loading offline recommendations...';
         });
         destinations = await _loadOfflineRecommendations();
 
-        setState(() {
+        _safeSetState(() {
           _isOfflineMode = true;
         });
       }
 
-      setState(() {
+      _safeSetState(() {
         _destinations = destinations;
         _isLoading = false;
         _loadingMessage = '';
@@ -141,7 +147,7 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
         _lastUpdated = DateTime.now();
       });
     } catch (e) {
-      setState(() {
+      _safeSetState(() {
         _errorMessage = 'Failed to load recommendations: ${e.toString()}';
         _isLoading = false;
         _loadingMessage = '';
@@ -152,40 +158,40 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
   /// Get current user location
   Future<void> _getCurrentLocation() async {
     try {
-      setState(() {
+      _safeSetState(() {
         _loadingMessage = 'Checking location services...';
       });
 
       bool serviceEnabled = await _location.serviceEnabled();
       if (!serviceEnabled) {
-        setState(() {
+        _safeSetState(() {
           _loadingMessage = 'Requesting location services...';
         });
         serviceEnabled = await _location.requestService();
         if (!serviceEnabled) return;
       }
 
-      setState(() {
+      _safeSetState(() {
         _loadingMessage = 'Checking location permission...';
       });
 
       PermissionStatus permissionGranted = await _location.hasPermission();
       if (permissionGranted == PermissionStatus.denied) {
-        setState(() {
+        _safeSetState(() {
           _loadingMessage = 'Requesting location permission...';
         });
         permissionGranted = await _location.requestPermission();
         if (permissionGranted != PermissionStatus.granted) return;
       }
 
-      setState(() {
+      _safeSetState(() {
         _loadingMessage = 'Getting your current location...';
       });
 
       _currentLocation = await _location.getLocation();
     } catch (e) {
       print('⚠️ Error getting location: $e');
-      setState(() {
+      _safeSetState(() {
         _loadingMessage = 'Using cached location...';
       });
       // Try to use cached location
@@ -201,7 +207,7 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
 
   /// Load offline recommendations
   Future<List<Destination>> _loadOfflineRecommendations() async {
-    setState(() {
+    _safeSetState(() {
       _loadingMessage = 'Loading cached destinations...';
     });
 
@@ -212,7 +218,7 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
       return cachedDestinations.take(widget.limit).toList();
     }
 
-    setState(() {
+    _safeSetState(() {
       _loadingMessage = 'Fetching offline recommendations...';
     });
 

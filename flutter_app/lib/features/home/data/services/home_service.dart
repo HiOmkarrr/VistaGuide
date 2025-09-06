@@ -37,25 +37,25 @@ class HomeService {
 
   final List<QuickAccessItem> _quickAccessItems = [
     const QuickAccessItem(
-      id: '1',
+      id: 'hospital',
       title: 'Hospital',
       icon: Icons.local_hospital,
       color: AppColors.emergency,
-      route: AppRoutes.emergency,
+      route: 'dialer:108',
     ),
     const QuickAccessItem(
-      id: '2',
-      title: 'Medical',
-      icon: Icons.medical_services,
+      id: 'police',
+      title: 'Police',
+      icon: Icons.local_police,
       color: AppColors.primary,
-      route: AppRoutes.emergency,
+      route: 'dialer:100',
     ),
     const QuickAccessItem(
-      id: '3',
-      title: 'Emergency Contact',
-      icon: Icons.contact_emergency,
+      id: 'emergency',
+      title: 'Emergency',
+      icon: Icons.emergency,
       color: Colors.orange,
-      route: AppRoutes.emergency,
+      route: 'emergency:trigger',
     ),
   ];
 

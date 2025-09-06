@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -178,6 +179,119 @@ class AuthService extends ChangeNotifier {
       throw _handleAuthException(e);
     } catch (e) {
       throw 'Failed to send password reset email. Please try again.';
+    }
+  }
+
+  /// Send OTP to phone number using Firebase Auth
+  Future<String> sendPhoneOTP({
+    required String phoneNumber,
+    required Function(String verificationId) onCodeSent,
+    required Function(String error) onError,
+  }) async {
+    try {
+      debugPrint('📱 Sending Firebase Auth OTP to $phoneNumber');
+      
+      final completer = Completer<String>();
+      
+      await _firebaseAuth.verifyPhoneNumber(
+        phoneNumber: phoneNumber,
+        verificationCompleted: (PhoneAuthCredential credential) async {
+          debugPrint('✅ Phone verification completed automatically');
+          // Auto-verification completed, sign in the user
+          try {
+            await _firebaseAuth.signInWithCredential(credential);
+            completer.complete('AUTO_VERIFIED');
+          } catch (e) {
+            completer.completeError('Auto-verification failed: $e');
+          }
+        },
+        verificationFailed: (FirebaseAuthException e) {
+          debugPrint('❌ Phone verification failed: ${e.code} - ${e.message}');
+          final errorMessage = _handleAuthException(e);
+          onError(errorMessage);
+          completer.completeError(errorMessage);
+        },
+        codeSent: (String verificationId, int? resendToken) {
+          debugPrint('📱 OTP code sent, verification ID: $verificationId');
+          onCodeSent(verificationId);
+          completer.complete(verificationId);
+        },
+        codeAutoRetrievalTimeout: (String verificationId) {
+          debugPrint('⏱️ Auto retrieval timeout for verification ID: $verificationId');
+          if (!completer.isCompleted) {
+            completer.complete(verificationId);
+          }
+        },
+        timeout: const Duration(seconds: 60),
+      );
+      
+      return await completer.future;
+    } catch (e) {
+      debugPrint('❌ Error sending phone OTP: $e');
+      rethrow;
+    }
+  }
+
+  /// Verify OTP using Firebase Auth
+  Future<UserCredential> verifyPhoneOTP({
+    required String verificationId,
+    required String otpCode,
+  }) async {
+    try {
+      debugPrint('🔑 Verifying OTP with Firebase Auth');
+      
+      final credential = PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: otpCode,
+      );
+      
+      final userCredential = await _firebaseAuth.signInWithCredential(credential);
+      
+      // Create user profile in Firestore if this is a new user
+      if (userCredential.user != null) {
+        await _firestoreUserService.initializeUserProfile(
+          userId: userCredential.user!.uid,
+          name: userCredential.user!.displayName ?? '',
+          email: userCredential.user!.email ?? '',
+          phoneNumber: userCredential.user!.phoneNumber,
+          photoURL: userCredential.user!.photoURL,
+        );
+      }
+      
+      notifyListeners();
+      debugPrint('✅ Phone OTP verified successfully');
+      return userCredential;
+    } on FirebaseAuthException catch (e) {
+      debugPrint('❌ OTP verification failed: ${e.code} - ${e.message}');
+      throw _handleAuthException(e);
+    } catch (e) {
+      debugPrint('❌ Error verifying OTP: $e');
+      throw 'Failed to verify OTP. Please try again.';
+    }
+  }
+
+  /// Link phone number to existing account
+  Future<void> linkPhoneNumber({
+    required String verificationId,
+    required String otpCode,
+  }) async {
+    try {
+      if (currentUser == null) {
+        throw 'No user is currently signed in';
+      }
+      
+      final credential = PhoneAuthProvider.credential(
+        verificationId: verificationId,
+        smsCode: otpCode,
+      );
+      
+      await currentUser!.linkWithCredential(credential);
+      notifyListeners();
+      debugPrint('✅ Phone number linked successfully');
+    } on FirebaseAuthException catch (e) {
+      throw _handleAuthException(e);
+    } catch (e) {
+      throw 'Failed to link phone number. Please try again.';
     }
   }
 

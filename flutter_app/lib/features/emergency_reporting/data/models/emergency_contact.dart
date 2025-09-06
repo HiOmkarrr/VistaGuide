@@ -5,7 +5,7 @@ class EmergencyContact {
   final String phoneNumber;
   final String label;
   final String? email;
-  final bool isPrimary;
+  final bool verified;
 
   const EmergencyContact({
     required this.id,
@@ -13,7 +13,7 @@ class EmergencyContact {
     required this.phoneNumber,
     required this.label,
     this.email,
-    this.isPrimary = false,
+    this.verified = false,
   });
 
   /// Create a copy of this contact with updated fields
@@ -23,7 +23,7 @@ class EmergencyContact {
     String? phoneNumber,
     String? label,
     String? email,
-    bool? isPrimary,
+    bool? verified,
   }) {
     return EmergencyContact(
       id: id ?? this.id,
@@ -31,7 +31,7 @@ class EmergencyContact {
       phoneNumber: phoneNumber ?? this.phoneNumber,
       label: label ?? this.label,
       email: email ?? this.email,
-      isPrimary: isPrimary ?? this.isPrimary,
+      verified: verified ?? this.verified,
     );
   }
 
@@ -43,7 +43,7 @@ class EmergencyContact {
       'phoneNumber': phoneNumber,
       'label': label,
       'email': email,
-      'isPrimary': isPrimary,
+      'verified': verified,
     };
   }
 
@@ -55,7 +55,7 @@ class EmergencyContact {
       phoneNumber: json['phoneNumber'] as String,
       label: json['label'] as String,
       email: json['email'] as String?,
-      isPrimary: json['isPrimary'] as bool? ?? false,
+      verified: json['verified'] as bool? ?? false,
     );
   }
 
@@ -70,6 +70,6 @@ class EmergencyContact {
 
   @override
   String toString() {
-    return 'EmergencyContact(id: $id, name: $name, phoneNumber: $phoneNumber, label: $label, isPrimary: $isPrimary)';
+    return 'EmergencyContact(id: $id, name: $name, phoneNumber: $phoneNumber, label: $label, verified: $verified)';
   }
 }
