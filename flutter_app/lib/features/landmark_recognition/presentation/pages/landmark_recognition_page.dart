@@ -7,19 +7,74 @@ import '../localWidgets/recognition_instructions.dart';
 import '../localWidgets/camera_section.dart';
 import '../localWidgets/recent_recognitions.dart';
 
-/// Landmark Recognition page - identify landmarks from photos
-class LandmarkRecognitionPage extends StatelessWidget {
+/// Landmark Recognition page - identify landmarks from photos using TensorFlow Lite
+class LandmarkRecognitionPage extends StatefulWidget {
   const LandmarkRecognitionPage({super.key});
 
   @override
+  State<LandmarkRecognitionPage> createState() =>
+      _LandmarkRecognitionPageState();
+}
+
+class _LandmarkRecognitionPageState extends State<LandmarkRecognitionPage> {
+  final LandmarkRecognitionService _recognitionService =
+      LandmarkRecognitionService();
+  bool _isModelLoading = true;
+  String _loadingMessage = 'Initializing AI model...';
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeModel();
+  }
+
+  Future<void> _initializeModel() async {
+    setState(() {
+      _isModelLoading = true;
+      _loadingMessage = 'Loading TensorFlow Lite model...';
+    });
+
+    try {
+      final success = await _recognitionService.initializeModel();
+
+      setState(() {
+        _isModelLoading = false;
+        _loadingMessage = success
+            ? 'Model ready for landmark recognition!'
+            : 'Failed to load model. Basic features available.';
+      });
+
+      if (!success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Failed to initialize AI model. Some features may be limited.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isModelLoading = false;
+        _loadingMessage = 'Error initializing model';
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _recognitionService.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final recognitionService = LandmarkRecognitionService();
-    final recentRecognitions = recognitionService.getRecentRecognitions();
+    final recentRecognitions = _recognitionService.getRecentRecognitions();
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const CustomAppBar(
-        title: 'Landmark Recognition',
+        title: 'AI Landmark Recognition',
         showBackButton: false,
       ),
       body: SafeArea(
@@ -29,20 +84,78 @@ class LandmarkRecognitionPage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 16),
+
+              // Model status indicator
+              if (_isModelLoading)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(child: Text(_loadingMessage)),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Card(
+                  color: _recognitionService.isModelInitialized
+                      ? Colors.green.shade50
+                      : Colors.orange.shade50,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _recognitionService.isModelInitialized
+                              ? Icons.check_circle
+                              : Icons.warning,
+                          color: _recognitionService.isModelInitialized
+                              ? Colors.green
+                              : Colors.orange,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _recognitionService.isModelInitialized
+                                ? 'AI Model Ready - Powered by TensorFlow Lite'
+                                : 'AI Model Unavailable - Using fallback mode',
+                            style: TextStyle(
+                              color: _recognitionService.isModelInitialized
+                                  ? Colors.green.shade700
+                                  : Colors.orange.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              const SizedBox(height: 16),
+
               RecognitionInstructions(
-                title: recognitionService.getInstructionsTitle(),
-                subtitle: recognitionService.getInstructionsSubtitle(),
+                title: _recognitionService.getInstructionsTitle(),
+                subtitle: _recognitionService.getInstructionsSubtitle(),
               ),
               const SizedBox(height: 24),
               CameraSection(
                 onCameraPressed: () =>
-                    recognitionService.showImageSourceDialog(),
+                    _recognitionService.showImageSourceDialog(context),
+                isEnabled: !_isModelLoading,
               ),
               const SizedBox(height: 24),
               RecentRecognitions(
                 recognitions: recentRecognitions,
                 onRecognitionTap: (recognitionId) =>
-                    recognitionService.handleRecognitionTap(recognitionId),
+                    _recognitionService.handleRecognitionTap(recognitionId),
               ),
               const SizedBox(height: 16),
             ],

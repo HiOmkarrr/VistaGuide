@@ -282,12 +282,13 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Colors.blue),
                         ),
                       )
                     : const Icon(Icons.refresh),
-                tooltip: _isLoading 
-                    ? 'Loading recommendations...' 
+                tooltip: _isLoading
+                    ? 'Loading recommendations...'
                     : 'Refresh recommendations',
               ),
             ],

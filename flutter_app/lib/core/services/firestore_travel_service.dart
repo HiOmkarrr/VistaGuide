@@ -1,9 +1,13 @@
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../../features/home/data/models/destination.dart';
 import 'magic_lane_service.dart';
 import 'simple_offline_storage_service.dart';
+import 'gemini_enrichment_service.dart';
+import 'connectivity_service.dart';
+import 'cache_manager_service.dart';
 
 /// User preferences for personalized recommendations
 class UserPreferences {
@@ -65,6 +69,14 @@ class FirestoreTravelService {
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GeminiEnrichmentService _geminiService = GeminiEnrichmentService();
+  final ConnectivityService _connectivityService = ConnectivityService();
+  final CacheManagerService _cacheManager = CacheManagerService();
+
+  /// Initialize the service and its dependencies
+  Future<void> initialize() async {
+    await _cacheManager.initialize();
+  }
 
   /// Collection references
   CollectionReference get _destinationsCollection =>
@@ -324,6 +336,7 @@ class FirestoreTravelService {
   // ==================== RECOMMENDATIONS ====================
 
   /// Get personalized destination recommendations based on user location and preferences
+  /// STRICT OFFLINE-FIRST: Uses cached data when available, only fetches online when cache expired AND internet available
   Future<List<Destination>> getRecommendations({
     required double userLat,
     required double userLng,
@@ -331,79 +344,188 @@ class FirestoreTravelService {
     double radiusKm = 50.0,
     List<String>? preferredTypes,
     bool useGooglePlaces = true,
+    bool enrichWithAI =
+        false, // Enable AI enrichment (respects caching and connectivity)
   }) async {
-    try {
+    if (kDebugMode) {
+      print('🎯 STARTING RECOMMENDATION FETCH for ($userLat, $userLng)');
       print(
-          '🎯 Getting personalized recommendations for user at ($userLat, $userLng)');
+          '📊 Parameters: limit=$limit, radius=${radiusKm}km, useAPI=$useGooglePlaces, enrichAI=$enrichWithAI');
+    }
 
-      // Get user preferences first
-      final userPreferences = await _getUserPreferences();
-      final visitedPlaces = await _getVisitedPlaces();
+    try {
+      // STEP 1: Check cache status and connectivity
+      final shouldRefresh = _cacheManager.shouldRefreshRecommendations();
+      final hasInternet = await _connectivityService.hasInternetConnection();
 
-      List<Destination> destinations = [];
+      if (kDebugMode) {
+        print('� CACHE ANALYSIS:');
+        print('   - Should refresh: $shouldRefresh');
+        print('   - Has internet: $hasInternet');
+        print(
+            '   - Cache age: ${_cacheManager.getRecommendationsCacheAgeInMinutes()}min');
+      }
 
-      // Start with Firestore data (which has rich historical info) then supplement with Magic Lane
-      final firestoreDestinations = await _getFirestoreRecommendations(
-        userLat,
-        userLng,
-        radiusKm,
-        preferredTypes,
-        userPreferences,
-      );
-      destinations.addAll(firestoreDestinations);
+      // STEP 2: ALWAYS try offline storage FIRST
+      final offlineStorage = SimpleOfflineStorageService();
+      List<Destination> offlineDestinations = [];
 
-      // If we need more results, try Magic Lane API for additional places
-      if (destinations.length < limit && useGooglePlaces) {
-        try {
-          final magicLaneDestinations =
-              await MagicLaneService.searchNearbyPlaces(
-            latitude: userLat,
-            longitude: userLng,
-            radiusKm: radiusKm,
-            maxResults: limit - destinations.length, // Only get what we need
-            categories: preferredTypes ?? ['tourism', 'culture'],
-          );
+      try {
+        if (kDebugMode) {
+          print('📱 ATTEMPTING OFFLINE LOAD...');
+        }
 
-          // Store new destinations in Firestore and offline storage
-          await _storeMagicLaneDestinations(magicLaneDestinations);
+        offlineDestinations = await offlineStorage.getOfflineDestinations(
+          nearLatitude: userLat,
+          nearLongitude: userLng,
+          radiusKm: radiusKm,
+          types: preferredTypes,
+          limit: limit,
+        );
 
-          // Store offline with simplified storage
-          final offlineStorage = SimpleOfflineStorageService();
-          await offlineStorage.storeDestinations(
-            magicLaneDestinations,
-            downloadImages:
-                false, // Simplified - no image downloading for faster startup
-            source: 'magic_lane',
-          );
-
-          destinations.addAll(magicLaneDestinations);
-        } catch (e) {
-          print('⚠️ Magic Lane API failed, using Firestore data only: $e');
+        if (kDebugMode) {
+          print(
+              '📱 OFFLINE RESULT: Found ${offlineDestinations.length} destinations');
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ OFFLINE LOAD FAILED: $e');
         }
       }
 
-      // If API didn't provide enough results, try offline storage for more
-      if (destinations.length < limit) {
-        try {
-          final offlineStorage = SimpleOfflineStorageService();
-          final offlineDestinations =
-              await offlineStorage.getOfflineDestinations(
-            nearLatitude: userLat,
-            nearLongitude: userLng,
-            radiusKm: radiusKm,
-            types: preferredTypes,
-            limit: limit - destinations.length,
-          );
+      // STEP 3: Decision Logic - STRICT OFFLINE-FIRST
+      List<Destination> destinations = [];
+      String dataSource = 'unknown';
 
-          if (offlineDestinations.isNotEmpty) {
+      if (offlineDestinations.isNotEmpty && !shouldRefresh) {
+        // ✅ CASE 1: Use offline data (cache is still fresh)
+        destinations = offlineDestinations;
+        dataSource = 'offline_cache_fresh';
+
+        if (kDebugMode) {
+          print(
+              '✅ USING OFFLINE DATA (cache fresh, ${destinations.length} destinations)');
+        }
+      } else if (offlineDestinations.isNotEmpty && !hasInternet) {
+        // ✅ CASE 2: Use offline data (no internet, regardless of cache age)
+        destinations = offlineDestinations;
+        dataSource = 'offline_no_internet';
+
+        if (kDebugMode) {
+          print(
+              '� USING OFFLINE DATA (no internet, ${destinations.length} destinations)');
+        }
+      } else if (hasInternet &&
+          (shouldRefresh || offlineDestinations.isEmpty)) {
+        // 🌐 CASE 3: Fetch from API (cache expired AND internet available)
+        if (kDebugMode) {
+          print('🌐 FETCHING FROM API (cache expired or no offline data)...');
+        }
+
+        // Get user preferences for API call
+        final userPreferences = await _getUserPreferences();
+
+        // Try Firestore first
+        try {
+          final firestoreDestinations = await _getFirestoreRecommendations(
+            userLat,
+            userLng,
+            radiusKm,
+            preferredTypes,
+            userPreferences,
+          );
+          destinations.addAll(firestoreDestinations);
+          dataSource = 'firestore';
+
+          if (kDebugMode) {
             print(
-                '📱 Found ${offlineDestinations.length} destinations in offline storage');
-            destinations.addAll(offlineDestinations);
+                '🔥 FIRESTORE RESULT: ${firestoreDestinations.length} destinations');
           }
         } catch (e) {
-          print('⚠️ Offline storage access failed: $e');
+          if (kDebugMode) {
+            print('❌ FIRESTORE FAILED: $e');
+          }
+        }
+
+        // If need more and Magic Lane enabled, try Magic Lane API
+        if (destinations.length < limit && useGooglePlaces) {
+          try {
+            if (kDebugMode) {
+              print('🪄 TRYING MAGIC LANE API...');
+            }
+
+            final magicLaneDestinations =
+                await MagicLaneService.searchNearbyPlaces(
+              latitude: userLat,
+              longitude: userLng,
+              radiusKm: radiusKm,
+              maxResults: limit - destinations.length,
+              categories: preferredTypes ?? ['tourism', 'culture'],
+            );
+
+            if (magicLaneDestinations.isNotEmpty) {
+              // Store new destinations for future offline use
+              await _storeMagicLaneDestinations(magicLaneDestinations);
+              await offlineStorage.storeDestinations(
+                magicLaneDestinations,
+                downloadImages: false,
+                source: 'magic_lane',
+              );
+
+              destinations.addAll(magicLaneDestinations);
+              dataSource = dataSource == 'firestore'
+                  ? 'firestore_magic_lane'
+                  : 'magic_lane';
+
+              if (kDebugMode) {
+                print(
+                    '🪄 MAGIC LANE RESULT: ${magicLaneDestinations.length} destinations');
+              }
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print('❌ MAGIC LANE FAILED: $e');
+            }
+          }
+        }
+
+        // If API calls failed but we have stale offline data, use it
+        if (destinations.isEmpty && offlineDestinations.isNotEmpty) {
+          destinations = offlineDestinations;
+          dataSource = 'offline_fallback';
+
+          if (kDebugMode) {
+            print(
+                '🔄 FALLBACK TO STALE OFFLINE DATA (${destinations.length} destinations)');
+          }
+        }
+
+        // Mark cache as fresh if we got new data from API
+        if (destinations.isNotEmpty && dataSource.contains('firestore') ||
+            dataSource.contains('magic_lane')) {
+          await _cacheManager.markRecommendationsFresh();
+
+          if (kDebugMode) {
+            print('✅ MARKED CACHE AS FRESH');
+          }
+        }
+      } else {
+        // ⚠️ CASE 4: No offline data and no internet
+        dataSource = 'no_data';
+
+        if (kDebugMode) {
+          print('❌ NO DATA AVAILABLE (no offline data, no internet)');
         }
       }
+
+      // STEP 4: Apply filtering and ranking (get user data for this)
+      if (kDebugMode) {
+        print('🔧 APPLYING FILTERS AND RANKING...');
+      }
+
+      // Get user preferences and visited places for filtering/ranking
+      final userPreferences = await _getUserPreferences();
+      final visitedPlaces = await _getVisitedPlaces();
 
       // Remove duplicates and apply filtering
       destinations = _deduplicateDestinations(destinations);
@@ -417,18 +539,232 @@ class FirestoreTravelService {
               .compareTo(_calculateRecommendationScore(
                   a, userPreferences, visitedPlaces)));
 
+      // STEP 5: Log final results
+      if (kDebugMode) {
+        print('📊 FINAL RESULTS:');
+        print('   - Data source: $dataSource');
+        print('   - Destinations found: ${destinations.length}');
+        print('   - Will return: ${destinations.take(limit).length}');
+      }
+
       // Update user interaction for improved future recommendations
       await _updateUserInteraction('recommendations_viewed', {
         'location': {'lat': userLat, 'lng': userLng},
         'count': destinations.take(limit).length,
-        'source': useGooglePlaces ? 'mixed' : 'firestore',
+        'source': dataSource,
+        'timestamp': DateTime.now().toIso8601String(),
       });
 
-      return destinations.take(limit).toList();
+      final finalDestinations = destinations.take(limit).toList();
+
+      // STEP 6: Smart AI enrichment (only when internet available and cache expired)
+      if (enrichWithAI && hasInternet) {
+        if (kDebugMode) {
+          print('🤖 STARTING SMART AI ENRICHMENT...');
+          print('   - Destinations to process: ${finalDestinations.length}');
+        }
+
+        final enrichedDestinations = <Destination>[];
+
+        for (final destination in finalDestinations) {
+          try {
+            // Check if this destination's AI cache is expired
+            final isAICacheExpired =
+                _cacheManager.isAIEnrichmentExpired(destination.id);
+
+            if (isAICacheExpired) {
+              // AI cache expired, enrich with fresh data
+              final enriched = await enrichDestinationWithGemini(destination);
+              await _cacheManager.markAIEnrichmentFresh(destination.id);
+              enrichedDestinations.add(enriched);
+
+              if (kDebugMode) {
+                print('✅ Enriched ${destination.title} with fresh AI data');
+              }
+            } else {
+              // AI cache still valid, use existing data
+              enrichedDestinations.add(destination);
+
+              if (kDebugMode) {
+                print('📱 Using cached AI data for ${destination.title}');
+              }
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print(
+                  '⚠️ Failed to enrich ${destination.title}, using original: $e');
+            }
+            enrichedDestinations.add(destination);
+          }
+        }
+
+        if (kDebugMode) {
+          print(
+              '✅ Smart AI enrichment completed for ${enrichedDestinations.length} destinations');
+        }
+        return enrichedDestinations;
+      } else if (enrichWithAI && !hasInternet) {
+        if (kDebugMode) {
+          print('📴 AI enrichment skipped - no internet connection');
+        }
+      }
+
+      return finalDestinations;
     } catch (e) {
-      print('❌ Error getting recommendations: $e');
+      if (kDebugMode) {
+        print('❌ Error getting recommendations: $e');
+      }
       // Fallback to popular destinations
       return await _getFallbackRecommendations(limit);
+    }
+  }
+
+  /// Enrich destination with Gemini AI-powered historical and educational information
+  Future<Destination> enrichDestinationWithGemini(
+      Destination destination) async {
+    try {
+      print('🤖 Enriching ${destination.title} with Gemini AI...');
+
+      // Use Gemini to enhance place information
+      final enrichedData =
+          await _geminiService.enrichPlaceInformation(destination.title);
+
+      if (enrichedData != null) {
+        // Create enriched destination with additional AI-generated content
+        return Destination(
+          id: destination.id,
+          title: destination.title,
+          subtitle: destination.subtitle,
+          imageUrl: enrichedData['imageUrl'] ?? destination.imageUrl,
+          description: enrichedData['description'] ?? destination.description,
+          rating: destination.rating,
+          tags: [
+            ...destination.tags,
+            ...((enrichedData['tags'] as List<dynamic>?)
+                    ?.map((e) => e.toString()) ??
+                [])
+          ],
+          isFavorite: destination.isFavorite,
+          type: destination.type,
+          coordinates: destination.coordinates,
+          distanceKm: destination.distanceKm,
+          historicalInfo: HistoricalInfo(
+            briefDescription: enrichedData['historical']?['briefDescription'] ??
+                destination.historicalInfo?.briefDescription ??
+                'Historical significance information generated by AI.',
+            extendedDescription: enrichedData['historical']
+                    ?['extendedDescription'] ??
+                destination.historicalInfo?.extendedDescription ??
+                'Detailed historical information generated by AI.',
+            keyEvents: [
+              ...(destination.historicalInfo?.keyEvents ?? []),
+              ...((enrichedData['historical']?['keyEvents'] as List<dynamic>?)
+                      ?.map((e) => e.toString()) ??
+                  [])
+            ],
+            timeline: enrichedData['historical']?['timeline'] ??
+                destination.historicalInfo?.timeline,
+            relatedFigures: [
+              ...(destination.historicalInfo?.relatedFigures ?? []),
+              ...((enrichedData['historical']?['relatedFigures']
+                          as List<dynamic>?)
+                      ?.map((e) => e.toString()) ??
+                  [])
+            ],
+          ),
+          educationalInfo: EducationalInfo(
+            facts: [
+              ...(destination.educationalInfo?.facts ?? []),
+              ...((enrichedData['educational']?['facts'] as List<dynamic>?)
+                      ?.map((e) => e.toString()) ??
+                  [])
+            ],
+            importance: enrichedData['educational']?['importance'] ??
+                destination.educationalInfo?.importance ??
+                'Educational importance information generated by AI.',
+            culturalRelevance: enrichedData['educational']
+                    ?['culturalRelevance'] ??
+                destination.educationalInfo?.culturalRelevance ??
+                'Cultural relevance information generated by AI.',
+            learningObjectives: [
+              ...(destination.educationalInfo?.learningObjectives ?? []),
+              ...((enrichedData['educational']?['learningObjectives']
+                          as List<dynamic>?)
+                      ?.map((e) => e.toString()) ??
+                  [])
+            ],
+            architecturalStyle: enrichedData['educational']
+                    ?['architecturalStyle'] ??
+                destination.educationalInfo?.architecturalStyle,
+            categories: [
+              ...(destination.educationalInfo?.categories ?? []),
+              ...((enrichedData['educational']?['categories'] as List<dynamic>?)
+                      ?.map((e) => e.toString()) ??
+                  [])
+            ],
+          ),
+          images: [
+            ...destination.images,
+            ...((enrichedData['images'] as List<dynamic>?)
+                    ?.map((e) => e.toString()) ??
+                [])
+          ],
+          createdAt: destination.createdAt,
+          updatedAt: DateTime.now(),
+          isOfflineAvailable: destination.isOfflineAvailable,
+        );
+      }
+
+      print('✅ Successfully enriched ${destination.title} with AI data');
+      return destination;
+    } catch (e) {
+      print('⚠️ Failed to enrich ${destination.title} with Gemini: $e');
+      // Return original destination if enrichment fails
+      return destination;
+    }
+  }
+
+  /// Get destination by ID with optional Gemini AI enrichment
+  Future<Destination?> getDestinationById(String destinationId,
+      {bool enrichWithAI = true}) async {
+    try {
+      print('🔍 Getting destination: $destinationId');
+
+      // First try to get from Firestore
+      final doc = await _destinationsCollection.doc(destinationId).get();
+
+      if (doc.exists) {
+        final destination = Destination.fromJson({
+          'id': doc.id,
+          ...doc.data() as Map<String, dynamic>,
+        });
+
+        // Optionally enrich with Gemini AI
+        if (enrichWithAI) {
+          return await enrichDestinationWithGemini(destination);
+        }
+
+        return destination;
+      }
+
+      // If not found in Firestore, try offline storage
+      final offlineStorage = SimpleOfflineStorageService();
+      final offlineDestinations = await offlineStorage.getOfflineDestinations(
+        limit: 1,
+      );
+
+      final offlineDestination = offlineDestinations
+          .cast<Destination?>()
+          .firstWhere((d) => d?.id == destinationId, orElse: () => null);
+
+      if (offlineDestination != null && enrichWithAI) {
+        return await enrichDestinationWithGemini(offlineDestination);
+      }
+
+      return offlineDestination;
+    } catch (e) {
+      print('❌ Error getting destination $destinationId: $e');
+      return null;
     }
   }
 

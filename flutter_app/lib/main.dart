@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart';
 import 'core/theme/app_theme.dart';
 import 'core/navigation/app_router.dart';
 import 'core/services/magic_lane_service.dart'; // This is actually Magic Lane service now
 import 'core/services/simple_offline_storage_service.dart';
 import 'core/services/firestore_data_seeder.dart';
+import 'core/services/firestore_travel_service.dart';
+import 'core/services/cache_manager_service.dart';
+import 'core/services/network_simulation_service.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -66,6 +70,24 @@ void main() async {
   } catch (e) {
     print('⚠️ Offline storage initialization failed: $e');
     // Continue - app can work without offline storage
+  }
+
+  // Initialize cache manager (required for optimization)
+  try {
+    final cacheManager = CacheManagerService();
+    await cacheManager.initialize();
+    print('✅ Cache manager initialized');
+  } catch (e) {
+    print('⚠️ Cache manager initialization failed: $e');
+  }
+
+  // Initialize travel service (required for AI features)
+  try {
+    final travelService = FirestoreTravelService();
+    await travelService.initialize();
+    print('✅ Travel service initialized');
+  } catch (e) {
+    print('⚠️ Travel service initialization failed: $e');
   }
 
   print('✅ Core initialization complete, starting app UI...');

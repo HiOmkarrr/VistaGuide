@@ -108,14 +108,17 @@ class RecentRecognitions extends StatelessWidget {
                   ),
                 ),
               ),
-              Padding(
-                padding: EdgeInsets.all(cardHeight * 0.08),
-                child: Text(
-                  recognition.landmarkName,
-                  style: AppTextStyles.bodySmall.copyWith(fontSize: fontSize),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              Container(
+                height: cardHeight * 0.25, // Fixed height for text area
+                padding: EdgeInsets.all(cardHeight * 0.06),
+                child: Center(
+                  child: Text(
+                    recognition.landmarkName,
+                    style: AppTextStyles.bodySmall.copyWith(fontSize: fontSize),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
             ],

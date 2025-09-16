@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/services/enhanced_offline_storage_service.dart';
 import '../../../../core/services/firestore_travel_service.dart';
+import '../../../../core/services/connectivity_service.dart';
+import '../../../../core/services/cache_manager_service.dart';
 import '../../data/models/destination.dart';
 
 /// Destination detail page that works both online and offline
@@ -25,6 +28,8 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
   final EnhancedOfflineStorageService _offlineStorage =
       EnhancedOfflineStorageService();
   final FirestoreTravelService _travelService = FirestoreTravelService();
+  final ConnectivityService _connectivityService = ConnectivityService();
+  final CacheManagerService _cacheManager = CacheManagerService();
 
   Destination? _destination;
   bool _isLoading = true;
@@ -45,33 +50,62 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
     });
 
     try {
-      // Use pre-loaded destination if available
+      if (kDebugMode) {
+        print('🔍 LOADING DESTINATION DETAILS: ${widget.destinationId}');
+      }
+
+      // STEP 1: Use pre-loaded destination if available
       if (widget.initialDestination != null) {
+        if (kDebugMode) {
+          print(
+              '✅ USING PRE-LOADED DESTINATION: ${widget.initialDestination!.title}');
+        }
+
         _destination = widget.initialDestination;
         await _saveDestinationOffline(_destination!);
+
+        // Always enhance with AI, even for pre-loaded destinations
+        _enhanceWithAIInBackground();
+
         setState(() {
           _isLoading = false;
         });
         return;
       }
 
-      // Try to load from offline storage first
+      // STEP 2: Try to load from offline storage FIRST
+      if (kDebugMode) {
+        print('📱 TRYING OFFLINE STORAGE...');
+      }
+
       _destination =
           await _offlineStorage.getOfflineDestination(widget.destinationId);
 
       if (_destination != null) {
+        if (kDebugMode) {
+          print('✅ FOUND IN OFFLINE STORAGE: ${_destination!.title}');
+        }
+
         setState(() {
           _isOfflineMode = true;
           _isLoading = false;
         });
 
-        // Try to update from online in background
-        _updateFromOnlineInBackground();
+        // Always enhance with AI, even for offline destinations
+        _enhanceWithAIInBackground();
       } else {
-        // Load from online
+        // STEP 3: Load from online with AI enhancement
+        if (kDebugMode) {
+          print('🌐 OFFLINE NOT FOUND, LOADING FROM ONLINE...');
+        }
+
         await _loadFromOnline();
       }
     } catch (e) {
+      if (kDebugMode) {
+        print('❌ ERROR LOADING DESTINATION: $e');
+      }
+
       setState(() {
         _errorMessage = 'Failed to load destination: ${e.toString()}';
         _isLoading = false;
@@ -81,14 +115,28 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
 
   Future<void> _loadFromOnline() async {
     try {
-      // Try to get detailed destination info from Firestore
-      final destinations = await _travelService.getDestinations(limit: 100);
-      _destination = destinations.firstWhere(
-        (d) => d.id == widget.destinationId,
-        orElse: () => throw Exception('Destination not found'),
+      if (kDebugMode) {
+        print('🌐 ATTEMPTING ONLINE FETCH...');
+      }
+
+      // Use the new getDestinationById method with AI enrichment
+      _destination = await _travelService.getDestinationById(
+        widget.destinationId,
+        enrichWithAI: true, // Enable Gemini AI enrichment
       );
 
-      // Save to offline storage
+      if (_destination == null) {
+        if (kDebugMode) {
+          print('❌ DESTINATION NOT FOUND ONLINE');
+        }
+        throw Exception('Destination not found');
+      }
+
+      if (kDebugMode) {
+        print('✅ LOADED FROM ONLINE: ${_destination!.title}');
+      }
+
+      // Save to offline storage for future use
       await _saveDestinationOffline(_destination!);
 
       setState(() {
@@ -96,6 +144,10 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
         _isLoading = false;
       });
     } catch (e) {
+      if (kDebugMode) {
+        print('❌ ONLINE FETCH FAILED: $e');
+      }
+
       setState(() {
         _errorMessage = 'Failed to load destination online: ${e.toString()}';
         _isLoading = false;
@@ -105,13 +157,13 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
 
   Future<void> _updateFromOnlineInBackground() async {
     try {
-      final destinations = await _travelService.getDestinations(limit: 100);
-      final updatedDestination = destinations.firstWhere(
-        (d) => d.id == widget.destinationId,
-        orElse: () => _destination!,
+      // Use the new getDestinationById method with AI enrichment for background updates
+      final updatedDestination = await _travelService.getDestinationById(
+        widget.destinationId,
+        enrichWithAI: true, // Enable AI enrichment for latest info
       );
 
-      if (updatedDestination.id == widget.destinationId) {
+      if (updatedDestination != null) {
         await _saveDestinationOffline(updatedDestination);
         if (mounted) {
           setState(() {
@@ -123,6 +175,76 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
     } catch (e) {
       // Silent fail for background update
       print('Background update failed: $e');
+    }
+  }
+
+  Future<void> _enhanceWithAIInBackground() async {
+    if (_destination == null) return;
+
+    try {
+      if (kDebugMode) {
+        print('🤖 AI ENHANCEMENT CHECK for ${_destination!.title}...');
+      }
+
+      // Initialize cache manager if needed
+      await _cacheManager.initialize();
+
+      // Check if AI enhancement is needed (cache expired + internet available)
+      final isAICacheExpired =
+          _cacheManager.isAIEnrichmentExpired(_destination!.id);
+      final hasInternet = await _connectivityService.hasInternetConnection();
+
+      if (kDebugMode) {
+        print('🔍 AI ENHANCEMENT STATUS:');
+        print('   - Cache expired: $isAICacheExpired');
+        print('   - Internet available: $hasInternet');
+        print(
+            '   - Cache age: ${_cacheManager.getAIEnrichmentAgeInMinutes(_destination!.id)}min');
+      }
+
+      if (!isAICacheExpired) {
+        if (kDebugMode) {
+          print('📱 AI CACHE STILL VALID - Skipping enhancement');
+        }
+        return;
+      }
+
+      if (!hasInternet) {
+        if (kDebugMode) {
+          print('📴 NO INTERNET - Skipping AI enhancement');
+        }
+        return;
+      }
+
+      if (kDebugMode) {
+        print(
+            '🤖 STARTING AI ENHANCEMENT (cache expired + internet available)...');
+      }
+
+      // Enhance with AI in background
+      final enrichedDestination =
+          await _travelService.enrichDestinationWithGemini(_destination!);
+
+      // Mark AI enhancement as fresh
+      await _cacheManager.markAIEnrichmentFresh(_destination!.id);
+
+      // Update the destination with AI-enhanced data
+      await _saveDestinationOffline(enrichedDestination);
+
+      if (mounted) {
+        setState(() {
+          _destination = enrichedDestination;
+        });
+
+        if (kDebugMode) {
+          print('✅ AI ENHANCEMENT COMPLETED for ${enrichedDestination.title}');
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ AI ENHANCEMENT FAILED: $e');
+      }
+      // Don't show error to user for background enhancement
     }
   }
 

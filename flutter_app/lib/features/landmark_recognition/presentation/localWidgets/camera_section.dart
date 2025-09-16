@@ -9,6 +9,7 @@ class CameraSection extends StatelessWidget {
   final String? selectedImagePath;
   final String buttonText;
   final String placeholderText;
+  final bool isEnabled;
 
   const CameraSection({
     super.key,
@@ -16,6 +17,7 @@ class CameraSection extends StatelessWidget {
     this.selectedImagePath,
     this.buttonText = 'Take Photo or Upload',
     this.placeholderText = 'No photo selected',
+    this.isEnabled = true,
   });
 
   @override
@@ -96,7 +98,7 @@ class CameraSection extends StatelessWidget {
       type: ButtonType.primary,
       size: ButtonSize.fullWidth,
       icon: const Icon(Icons.camera_alt),
-      onPressed: onCameraPressed,
+      onPressed: isEnabled ? onCameraPressed : null,
     );
   }
 }
