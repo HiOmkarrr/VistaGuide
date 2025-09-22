@@ -20,7 +20,8 @@ class TensorFlowLiteService {
   bool _isModelLoaded = false;
 
   // Classification configuration (mimicking Kotlin Task Library implementation)
-  double _scoreThreshold = 0.5; // Equivalent to ImageClassifierOptions.setScoreThreshold
+  double _scoreThreshold =
+      0.5; // Equivalent to ImageClassifierOptions.setScoreThreshold
   int _maxResults = 1; // Equivalent to setMaxResults
   int _numThreads = 2; // Equivalent to BaseOptions.setNumThreads
 
@@ -37,9 +38,10 @@ class TensorFlowLiteService {
         print('🤖 Initializing TensorFlow Lite model...');
       }
 
-  // Load the model with interpreter options (threads etc.)
-  final interpreterOptions = InterpreterOptions()..threads = _numThreads;
-  _interpreter = await Interpreter.fromAsset(_modelPath, options: interpreterOptions);
+      // Load the model with interpreter options (threads etc.)
+      final interpreterOptions = InterpreterOptions()..threads = _numThreads;
+      _interpreter =
+          await Interpreter.fromAsset(_modelPath, options: interpreterOptions);
 
       if (_interpreter == null) {
         if (kDebugMode) {
@@ -163,7 +165,8 @@ class TensorFlowLiteService {
       }
 
       if (kDebugMode) {
-        print('✅ TensorFlow: Image preprocessed successfully. Size: ${preprocessedImage.length}');
+        print(
+            '✅ TensorFlow: Image preprocessed successfully. Size: ${preprocessedImage.length}');
       }
 
       // Run inference
@@ -177,16 +180,18 @@ class TensorFlowLiteService {
       }
 
       if (kDebugMode) {
-        print('✅ TensorFlow: Inference completed. Output length: ${output.length}');
+        print(
+            '✅ TensorFlow: Inference completed. Output length: ${output.length}');
       }
 
       // Process results
-  final prediction = _processOutput(output);
+      final prediction = _processOutput(output);
 
       if (kDebugMode) {
         print('✅ TensorFlow: Landmark recognition completed');
         if (prediction != null) {
-          print('   🎯 TensorFlow: Predicted: ${prediction.landmarkName} (${(prediction.confidence * 100).toStringAsFixed(1)}%)');
+          print(
+              '   🎯 TensorFlow: Predicted: ${prediction.landmarkName} (${(prediction.confidence * 100).toStringAsFixed(1)}%)');
         } else {
           print('   ❌ TensorFlow: No valid prediction generated');
         }
@@ -213,7 +218,8 @@ class TensorFlowLiteService {
       _numThreads = numThreads;
     }
     if (kDebugMode) {
-      print('⚙️ Updated TFLite config => threshold: $_scoreThreshold, maxResults: $_maxResults, threads: $_numThreads');
+      print(
+          '⚙️ Updated TFLite config => threshold: $_scoreThreshold, maxResults: $_maxResults, threads: $_numThreads');
     }
   }
 
@@ -234,7 +240,8 @@ class TensorFlowLiteService {
       }
 
       if (kDebugMode) {
-        print('📏 TensorFlow: Original image size: ${image.width}x${image.height}');
+        print(
+            '📏 TensorFlow: Original image size: ${image.width}x${image.height}');
       }
 
       // Resize to model input size (321x321 for Google Landmarks)
@@ -242,12 +249,12 @@ class TensorFlowLiteService {
           img.copyResize(image, width: _inputSize, height: _inputSize);
 
       if (kDebugMode) {
-        print('📐 TensorFlow: Resized to: ${resizedImage.width}x${resizedImage.height}');
+        print(
+            '📐 TensorFlow: Resized to: ${resizedImage.width}x${resizedImage.height}');
       }
 
       // Convert to Uint8List (RGB format) as expected by the model
-      final Uint8List input =
-          Uint8List(_inputSize * _inputSize * _numChannels);
+      final Uint8List input = Uint8List(_inputSize * _inputSize * _numChannels);
 
       int pixelIndex = 0;
       for (int y = 0; y < _inputSize; y++) {
@@ -262,7 +269,8 @@ class TensorFlowLiteService {
       }
 
       if (kDebugMode) {
-        print('✅ TensorFlow: Preprocessing completed, output size: ${input.length}');
+        print(
+            '✅ TensorFlow: Preprocessing completed, output size: ${input.length}');
       }
 
       return input;
@@ -287,7 +295,8 @@ class TensorFlowLiteService {
           input.reshape([1, _inputSize, _inputSize, _numChannels]);
 
       if (kDebugMode) {
-        print('📈 TensorFlow: Input tensor shape: [1, $_inputSize, $_inputSize, $_numChannels]');
+        print(
+            '📈 TensorFlow: Input tensor shape: [1, $_inputSize, $_inputSize, $_numChannels]');
       }
 
       // Get output tensor info
@@ -308,7 +317,7 @@ class TensorFlowLiteService {
       if (kDebugMode) {
         print('⚡ TensorFlow: Running model inference...');
       }
-      
+
       _interpreter!.run(inputTensor, outputTensor);
 
       // Extract output
@@ -317,18 +326,19 @@ class TensorFlowLiteService {
       if (kDebugMode) {
         print('✅ TensorFlow: Inference completed successfully');
         print('📊 TensorFlow: Output values count: ${output.length}');
-        
+
         // Show top 5 confidence values for debugging
         final sortedWithIndices = <MapEntry<int, double>>[];
         for (int i = 0; i < output.length; i++) {
           sortedWithIndices.add(MapEntry(i, output[i]));
         }
         sortedWithIndices.sort((a, b) => b.value.compareTo(a.value));
-        
+
         print('🏆 TensorFlow: Top 5 predictions:');
         for (int i = 0; i < 5 && i < sortedWithIndices.length; i++) {
           final entry = sortedWithIndices[i];
-          print('   ${i + 1}. Index ${entry.key}: ${(entry.value * 100).toStringAsFixed(2)}%');
+          print(
+              '   ${i + 1}. Index ${entry.key}: ${(entry.value * 100).toStringAsFixed(2)}%');
         }
       }
 
@@ -352,7 +362,8 @@ class TensorFlowLiteService {
     final outLen = output.length;
 
     if (kDebugMode) {
-      print('📦 Parsing output: length=$outLen labels=$labelsCount threshold=$_scoreThreshold maxResults=$_maxResults');
+      print(
+          '📦 Parsing output: length=$outLen labels=$labelsCount threshold=$_scoreThreshold maxResults=$_maxResults');
     }
 
     // CASE A: Perfect match -> standard classification path
@@ -362,12 +373,14 @@ class TensorFlowLiteService {
       if (stats['treatAsProbabilities'] == true) {
         scores = output;
         if (kDebugMode) {
-          print('🧪 Treating outputs as probability distribution (sum≈${stats['sum'].toStringAsFixed(3)})');
+          print(
+              '🧪 Treating outputs as probability distribution (sum≈${stats['sum'].toStringAsFixed(3)})');
         }
       } else {
         scores = _applySoftmax(output);
         if (kDebugMode) {
-          print('🧪 Applied softmax to logits (preSum=${stats['sum'].toStringAsFixed(3)})');
+          print(
+              '🧪 Applied softmax to logits (preSum=${stats['sum'].toStringAsFixed(3)})');
         }
       }
       return _selectTopWithLabels(scores);
@@ -398,11 +411,16 @@ class TensorFlowLiteService {
       if (v >= 0.9) abovePoint9++;
     }
     if (kDebugMode) {
-      print('🔬 Large output mismatch detected. Stats over all $outLen values:');
-      print('   min=$minVal max=$maxVal sampleMean≈${meanSample.toStringAsFixed(4)}');
-      print('   >=0.5: $abovePoint5  ( ${(abovePoint5 / outLen * 100).toStringAsFixed(2)}% )');
-      print('   >=0.9: $abovePoint9  ( ${(abovePoint9 / outLen * 100).toStringAsFixed(2)}% )');
-      print('⚠️ Labels file likely does not match model. Provide full labels file with $outLen lines for proper mapping.');
+      print(
+          '🔬 Large output mismatch detected. Stats over all $outLen values:');
+      print(
+          '   min=$minVal max=$maxVal sampleMean≈${meanSample.toStringAsFixed(4)}');
+      print(
+          '   >=0.5: $abovePoint5  ( ${(abovePoint5 / outLen * 100).toStringAsFixed(2)}% )');
+      print(
+          '   >=0.9: $abovePoint9  ( ${(abovePoint9 / outLen * 100).toStringAsFixed(2)}% )');
+      print(
+          '⚠️ Labels file likely does not match model. Provide full labels file with $outLen lines for proper mapping.');
     }
 
     // Multi-label selection across entire vector
@@ -410,7 +428,8 @@ class TensorFlowLiteService {
 
     // Filter by dynamic thresholds
     double dynamicThreshold = _scoreThreshold;
-    List<_IndexedScore> filtered = topEntries.where((e) => e.score >= dynamicThreshold).toList();
+    List<_IndexedScore> filtered =
+        topEntries.where((e) => e.score >= dynamicThreshold).toList();
     if (filtered.isEmpty && dynamicThreshold > 0.3) {
       dynamicThreshold = 0.3;
       filtered = topEntries.where((e) => e.score >= dynamicThreshold).toList();
@@ -423,7 +442,8 @@ class TensorFlowLiteService {
       // Fallback: accept very top result even if below thresholds
       filtered = [topEntries.first];
       if (kDebugMode) {
-        print('🛟 No predictions passed thresholds (0.5/0.3/0.1). Using absolute top result.');
+        print(
+            '🛟 No predictions passed thresholds (0.5/0.3/0.1). Using absolute top result.');
       }
     }
 
@@ -433,18 +453,22 @@ class TensorFlowLiteService {
 
     // Build structured predictions (limit 5 for UI preview)
     final preview = filtered.take(5).map((e) {
-      final label = e.index < labelsCount ? _labels![e.index] : 'Class ${e.index}';
+      final label =
+          e.index < labelsCount ? _labels![e.index] : 'Class ${e.index}';
       return LandmarkConfidence(landmarkName: label, confidence: e.score);
     }).toList();
 
     final best = chosen.first;
-    final bestLabel = best.index < labelsCount ? _labels![best.index] : 'Class ${best.index}';
+    final bestLabel =
+        best.index < labelsCount ? _labels![best.index] : 'Class ${best.index}';
 
     if (kDebugMode) {
-      print('�️ Multi-label top (dynamicThreshold=$dynamicThreshold requestedThreshold=$_scoreThreshold):');
+      print(
+          '�️ Multi-label top (dynamicThreshold=$dynamicThreshold requestedThreshold=$_scoreThreshold):');
       for (int i = 0; i < preview.length; i++) {
         final p = preview[i];
-        print('   ${i + 1}. ${p.landmarkName} ${(p.confidence * 100).toStringAsFixed(2)}% (idx=${filtered[i].index})');
+        print(
+            '   ${i + 1}. ${p.landmarkName} ${(p.confidence * 100).toStringAsFixed(2)}% (idx=${filtered[i].index})');
       }
     }
 
@@ -499,12 +523,17 @@ class TensorFlowLiteService {
       double bestVal = -1;
       int bestIdx = -1;
       for (int i = 0; i < scores.length; i++) {
-        if (scores[i] > bestVal) { bestVal = scores[i]; bestIdx = i; }
+        if (scores[i] > bestVal) {
+          bestVal = scores[i];
+          bestIdx = i;
+        }
       }
       if (kDebugMode) {
-        print('🛟 No scores >= threshold $_scoreThreshold; using best index $bestIdx (${(bestVal * 100).toStringAsFixed(2)}%)');
+        print(
+            '🛟 No scores >= threshold $_scoreThreshold; using best index $bestIdx (${(bestVal * 100).toStringAsFixed(2)}%)');
       }
-      final bestLabel = bestIdx < _labels!.length ? _labels![bestIdx] : 'Class $bestIdx';
+      final bestLabel =
+          bestIdx < _labels!.length ? _labels![bestIdx] : 'Class $bestIdx';
       return LandmarkPrediction(
         landmarkName: bestLabel,
         confidence: bestVal,
@@ -515,10 +544,13 @@ class TensorFlowLiteService {
     }
     entries.sort((a, b) => b.score.compareTo(a.score));
     final top = entries.take(_maxResults).toList();
-    final preview = entries.take(5).map((e) => LandmarkConfidence(
-      landmarkName: _labels![e.index],
-      confidence: e.score,
-    )).toList();
+    final preview = entries
+        .take(5)
+        .map((e) => LandmarkConfidence(
+              landmarkName: _labels![e.index],
+              confidence: e.score,
+            ))
+        .toList();
     final best = top.first;
     return LandmarkPrediction(
       landmarkName: _labels![best.index],

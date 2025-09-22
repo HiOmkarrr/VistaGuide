@@ -8,6 +8,7 @@ import 'simple_offline_storage_service.dart';
 import 'gemini_enrichment_service.dart';
 import 'connectivity_service.dart';
 import 'cache_manager_service.dart';
+import 'offline_cache_service.dart';
 
 /// User preferences for personalized recommendations
 class UserPreferences {
@@ -367,12 +368,28 @@ class FirestoreTravelService {
       }
 
       // STEP 2: ALWAYS try offline storage FIRST
-      final offlineStorage = SimpleOfflineStorageService();
+  final offlineStorage = SimpleOfflineStorageService();
+  await offlineStorage.initialize();
       List<Destination> offlineDestinations = [];
+
+      // 2A. Ultra-fast path: SharedPreferences cached destinations
+      try {
+        final spCached = await OfflineCacheService.getCachedDestinations();
+        if (spCached.isNotEmpty) {
+          if (kDebugMode) {
+            print('� SP CACHE: Found ${spCached.length} destinations');
+          }
+          offlineDestinations.addAll(spCached);
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('⚠️ Failed to read SP cache: $e');
+        }
+      }
 
       try {
         if (kDebugMode) {
-          print('📱 ATTEMPTING OFFLINE LOAD...');
+          print('�📱 ATTEMPTING OFFLINE LOAD...');
         }
 
         offlineDestinations = await offlineStorage.getOfflineDestinations(
@@ -384,13 +401,17 @@ class FirestoreTravelService {
         );
 
         if (kDebugMode) {
-          print(
-              '📱 OFFLINE RESULT: Found ${offlineDestinations.length} destinations');
+          print('📱 OFFLINE RESULT (SQLite): Found ${offlineDestinations.length} destinations');
         }
       } catch (e) {
         if (kDebugMode) {
           print('❌ OFFLINE LOAD FAILED: $e');
         }
+      }
+
+      // 2C. Deduplicate any combined offline results (SP + SQLite)
+      if (offlineDestinations.isNotEmpty) {
+        offlineDestinations = _deduplicateDestinations(offlineDestinations);
       }
 
       // STEP 3: Decision Logic - STRICT OFFLINE-FIRST
@@ -441,6 +462,25 @@ class FirestoreTravelService {
             print(
                 '🔥 FIRESTORE RESULT: ${firestoreDestinations.length} destinations');
           }
+
+          // Persist Firestore results for offline use (fast and durable)
+          if (firestoreDestinations.isNotEmpty) {
+            try {
+              await OfflineCacheService.cacheDestinations(firestoreDestinations);
+              await offlineStorage.storeDestinations(
+                firestoreDestinations,
+                downloadImages: false,
+                source: 'firestore',
+              );
+              if (kDebugMode) {
+                print('💾 Persisted Firestore results to SharedPreferences and SQLite');
+              }
+            } catch (e) {
+              if (kDebugMode) {
+                print('⚠️ Failed to persist Firestore results offline: $e');
+              }
+            }
+          }
         } catch (e) {
           if (kDebugMode) {
             print('❌ FIRESTORE FAILED: $e');
@@ -471,6 +511,14 @@ class FirestoreTravelService {
                 downloadImages: false,
                 source: 'magic_lane',
               );
+              // Also cache for fast startup
+              try {
+                await OfflineCacheService.cacheDestinations(magicLaneDestinations);
+              } catch (e) {
+                if (kDebugMode) {
+                  print('⚠️ Failed to SharedPreferences-cache Magic Lane results: $e');
+                }
+              }
 
               destinations.addAll(magicLaneDestinations);
               dataSource = dataSource == 'firestore'
@@ -516,6 +564,17 @@ class FirestoreTravelService {
         if (kDebugMode) {
           print('❌ NO DATA AVAILABLE (no offline data, no internet)');
         }
+
+        // As a last-resort when completely offline, try quick SharedPreferences cache
+        try {
+          final spCached = await OfflineCacheService.getCachedDestinations();
+          if (spCached.isNotEmpty) {
+            if (kDebugMode) {
+              print('📦 Using SharedPreferences cached destinations (${spCached.length})');
+            }
+            return spCached.take(limit).toList();
+          }
+        } catch (_) {}
       }
 
       // STEP 4: Apply filtering and ranking (get user data for this)
@@ -557,10 +616,11 @@ class FirestoreTravelService {
 
       final finalDestinations = destinations.take(limit).toList();
 
-      // STEP 6: Smart AI enrichment (only when internet available and cache expired)
-      if (enrichWithAI && hasInternet) {
+      // STEP 6: PROACTIVE AI ENRICHMENT - Always enrich when internet available
+      // This ensures enhanced data is cached before user clicks on cards
+      if (hasInternet && finalDestinations.isNotEmpty) {
         if (kDebugMode) {
-          print('🤖 STARTING SMART AI ENRICHMENT...');
+          print('🤖 STARTING PROACTIVE AI ENRICHMENT...');
           print('   - Destinations to process: ${finalDestinations.length}');
         }
 
@@ -578,8 +638,11 @@ class FirestoreTravelService {
               await _cacheManager.markAIEnrichmentFresh(destination.id);
               enrichedDestinations.add(enriched);
 
+              // Store enriched destination for instant access
+              await _storeEnrichedDestination(enriched);
+
               if (kDebugMode) {
-                print('✅ Enriched ${destination.title} with fresh AI data');
+                print('✅ Enriched & cached ${destination.title} with fresh AI data');
               }
             } else {
               // AI cache still valid, use existing data
@@ -600,12 +663,34 @@ class FirestoreTravelService {
 
         if (kDebugMode) {
           print(
-              '✅ Smart AI enrichment completed for ${enrichedDestinations.length} destinations');
+              '✅ Proactive AI enrichment completed for ${enrichedDestinations.length} destinations');
         }
+
+        // Cache enriched destinations for offline access
+        try {
+          await OfflineCacheService.cacheDestinations(enrichedDestinations);
+          await offlineStorage.storeDestinations(
+            enrichedDestinations,
+            downloadImages: false,
+            source: 'ai_enriched',
+          );
+          if (kDebugMode) {
+            print('💾 Cached enriched destinations for offline access');
+          }
+        } catch (e) {
+          if (kDebugMode) {
+            print('⚠️ Failed to cache enriched destinations: $e');
+          }
+        }
+
         return enrichedDestinations;
-      } else if (enrichWithAI && !hasInternet) {
+      } else if (!hasInternet) {
         if (kDebugMode) {
-          print('📴 AI enrichment skipped - no internet connection');
+          print('📴 Proactive AI enrichment skipped - no internet connection');
+        }
+      } else if (finalDestinations.isEmpty) {
+        if (kDebugMode) {
+          print('📭 No destinations to enrich');
         }
       }
 
@@ -724,13 +809,62 @@ class FirestoreTravelService {
     }
   }
 
-  /// Get destination by ID with optional Gemini AI enrichment
+  /// Store enriched destination in both Firestore and offline storage
+  Future<void> _storeEnrichedDestination(Destination enrichedDestination) async {
+    try {
+      // Update in Firestore with enriched data
+      await _destinationsCollection.doc(enrichedDestination.id).update({
+        'description': enrichedDestination.description,
+        'historicalInfo': enrichedDestination.historicalInfo?.toJson(),
+        'educationalInfo': enrichedDestination.educationalInfo?.toJson(),
+        'tags': enrichedDestination.tags,
+        'images': enrichedDestination.images,
+        'isAIEnriched': true,
+        'lastAIEnrichment': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      if (kDebugMode) {
+        print('💾 Stored enriched ${enrichedDestination.title} in Firestore');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('⚠️ Failed to store enriched destination in Firestore: $e');
+      }
+    }
+  }
+
+  /// Get destination by ID with cached enrichment check
   Future<Destination?> getDestinationById(String destinationId,
       {bool enrichWithAI = true}) async {
     try {
       print('🔍 Getting destination: $destinationId');
 
-      // First try to get from Firestore
+      // First try to get from offline storage (may have cached enriched version)
+      final offlineStorage = SimpleOfflineStorageService();
+      await offlineStorage.initialize();
+      
+      final offlineDestinations = await offlineStorage.getOfflineDestinations(limit: 50);
+      final cachedDestination = offlineDestinations
+          .cast<Destination?>()
+          .firstWhere((d) => d?.id == destinationId, orElse: () => null);
+
+      if (cachedDestination != null) {
+        if (kDebugMode) {
+          print('📱 Found cached destination: ${cachedDestination.title}');
+        }
+        
+        // Check if cached version is AI-enriched and fresh
+        final isAICacheExpired = _cacheManager.isAIEnrichmentExpired(destinationId);
+        if (!isAICacheExpired && cachedDestination.historicalInfo != null) {
+          if (kDebugMode) {
+            print('✅ Using cached enriched destination');
+          }
+          return cachedDestination;
+        }
+      }
+
+      // If not in cache or cache expired, get from Firestore
       final doc = await _destinationsCollection.doc(destinationId).get();
 
       if (doc.exists) {
@@ -739,29 +873,35 @@ class FirestoreTravelService {
           ...doc.data() as Map<String, dynamic>,
         });
 
-        // Optionally enrich with Gemini AI
-        if (enrichWithAI) {
-          return await enrichDestinationWithGemini(destination);
+        // Check if Firestore version needs enrichment
+        final hasInternet = await _connectivityService.hasInternetConnection();
+        if (enrichWithAI && hasInternet) {
+          final isAICacheExpired = _cacheManager.isAIEnrichmentExpired(destinationId);
+          
+          if (isAICacheExpired) {
+            final enriched = await enrichDestinationWithGemini(destination);
+            await _cacheManager.markAIEnrichmentFresh(destinationId);
+            await _storeEnrichedDestination(enriched);
+            
+            // Cache for future offline access
+            try {
+              await offlineStorage.storeDestinations([enriched], source: 'ai_enriched');
+              await OfflineCacheService.cacheDestinations([enriched]);
+            } catch (e) {
+              if (kDebugMode) {
+                print('⚠️ Failed to cache enriched destination: $e');
+              }
+            }
+            
+            return enriched;
+          }
         }
 
         return destination;
       }
 
-      // If not found in Firestore, try offline storage
-      final offlineStorage = SimpleOfflineStorageService();
-      final offlineDestinations = await offlineStorage.getOfflineDestinations(
-        limit: 1,
-      );
-
-      final offlineDestination = offlineDestinations
-          .cast<Destination?>()
-          .firstWhere((d) => d?.id == destinationId, orElse: () => null);
-
-      if (offlineDestination != null && enrichWithAI) {
-        return await enrichDestinationWithGemini(offlineDestination);
-      }
-
-      return offlineDestination;
+      // Fallback to cached version if Firestore fails
+      return cachedDestination;
     } catch (e) {
       print('❌ Error getting destination $destinationId: $e');
       return null;

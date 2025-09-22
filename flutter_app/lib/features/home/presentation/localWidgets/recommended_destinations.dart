@@ -3,6 +3,7 @@ import 'package:location/location.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/services/firestore_travel_service.dart';
 import '../../../../core/services/offline_cache_service.dart';
+import '../../../../core/services/connectivity_service.dart';
 import '../../data/models/destination.dart';
 import 'destination_card.dart';
 
@@ -42,6 +43,11 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
   String _loadingMessage = 'Initializing...';
   LocationData? _currentLocation;
 
+  // Lazy loading state
+  bool _isLazyLoading = false;
+  int _loadedCount = 0;
+  List<Destination> _allDestinations = [];
+
   // Cache management
   static DateTime? _lastUpdated;
   static List<Destination>? _cachedDestinations;
@@ -59,7 +65,7 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
     _loadRecommendations();
   }
 
-  /// Load recommendations based on user location and preferences
+  /// Load recommendations with lazy loading for better UI experience
   Future<void> _loadRecommendations([bool forceRefresh = false]) async {
     // Check if we have cached data that's still valid (unless forcing refresh)
     if (!forceRefresh &&
@@ -79,6 +85,7 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
         _isLoading = true;
         _errorMessage = null;
         _loadingMessage = 'Getting your location...';
+        _destinations = []; // Clear existing destinations
       });
 
       // Try to get current location if enabled
@@ -86,22 +93,65 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
         await _getCurrentLocation();
       }
 
+      // Check internet connectivity first to decide loading strategy
+      final connectivityService = ConnectivityService();
+      
+      // Try cached connectivity first for instant offline detection
+      final cachedConnectivity = connectivityService.hasInternetConnectionCached();
+      if (cachedConnectivity == false) {
+        // We know we're offline from cache - go directly to offline mode
+        _safeSetState(() {
+          _loadingMessage = 'No internet - loading offline destinations...';
+          _isOfflineMode = true;
+        });
+
+        final offlineDestinations = await _loadOfflineRecommendations();
+        _allDestinations = offlineDestinations;
+
+        // Start lazy loading for offline destinations
+        await _lazyLoadDestinations();
+
+        // Cache the data
+        _cachedDestinations = _allDestinations;
+        _lastUpdated = DateTime.now();
+        return;
+      }
+
+      // Check actual connectivity (if not cached or cached shows online)
+      final hasInternet = await connectivityService.hasInternetConnection();
+
+      if (!hasInternet) {
+        // No internet - go directly to offline mode
+        _safeSetState(() {
+          _loadingMessage = 'No internet - loading offline destinations...';
+          _isOfflineMode = true;
+        });
+
+        final offlineDestinations = await _loadOfflineRecommendations();
+        _allDestinations = offlineDestinations;
+
+        // Start lazy loading for offline destinations
+        await _lazyLoadDestinations();
+
+        // Cache the data
+        _cachedDestinations = _allDestinations;
+        _lastUpdated = DateTime.now();
+        return;
+      }
+
+      // Has internet - try online recommendations
       _safeSetState(() {
         _loadingMessage = _currentLocation != null
-            ? 'Finding destinations near you...'
+            ? 'Personalizing recommendations...'
             : 'Loading curated recommendations...';
       });
 
-      List<Destination> destinations;
+      List<Destination> allDestinations;
 
-      // Try to load online recommendations first
+      // Try to load online recommendations
       try {
-        _safeSetState(() {
-          _loadingMessage = 'Personalizing recommendations...';
-        });
-
         if (_currentLocation != null) {
-          destinations = await _travelService.getRecommendations(
+          allDestinations = await _travelService.getRecommendations(
             userLat: _currentLocation!.latitude!,
             userLng: _currentLocation!.longitude!,
             limit: widget.limit,
@@ -109,49 +159,88 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
           );
 
           // Cache for offline use
-          await OfflineCacheService.cacheDestinations(destinations);
+          await OfflineCacheService.cacheDestinations(allDestinations);
           await OfflineCacheService.cacheUserLocation(
             _currentLocation!.latitude!,
             _currentLocation!.longitude!,
           );
         } else {
           // Fallback to general recommendations
-          destinations =
+          allDestinations =
               await _travelService.getDestinations(limit: widget.limit);
         }
 
         _safeSetState(() {
           _isOfflineMode = false;
-          _loadingMessage = 'Finalizing recommendations...';
+          _loadingMessage = 'Preparing your recommendations...';
         });
+
+        // Store all destinations for lazy loading
+        _allDestinations = allDestinations;
+        
+        // Start lazy loading destinations one by one
+        await _lazyLoadDestinations();
+
       } catch (e) {
-        // Fallback to offline recommendations
+        // Online failed - fallback to offline recommendations
         print('⚠️ Online recommendations failed, trying offline: $e');
         _safeSetState(() {
           _loadingMessage = 'Loading offline recommendations...';
         });
-        destinations = await _loadOfflineRecommendations();
+        allDestinations = await _loadOfflineRecommendations();
+        _allDestinations = allDestinations;
 
         _safeSetState(() {
           _isOfflineMode = true;
         });
+
+        // Start lazy loading for offline destinations too
+        await _lazyLoadDestinations();
       }
 
-      _safeSetState(() {
-        _destinations = destinations;
-        _isLoading = false;
-        _loadingMessage = '';
+      // Cache the new data
+      _cachedDestinations = _allDestinations;
+      _lastUpdated = DateTime.now();
 
-        // Cache the new data
-        _cachedDestinations = destinations;
-        _lastUpdated = DateTime.now();
-      });
     } catch (e) {
       _safeSetState(() {
         _errorMessage = 'Failed to load recommendations: ${e.toString()}';
         _isLoading = false;
         _loadingMessage = '';
       });
+    }
+  }
+
+  /// Lazy load destinations one by one for smoother UI experience
+  Future<void> _lazyLoadDestinations() async {
+    _safeSetState(() {
+      _isLazyLoading = true;
+      _loadedCount = 0;
+    });
+
+    // Show destinations one by one with a small delay
+    for (int i = 0; i < _allDestinations.length; i++) {
+      if (!mounted) break; // Safety check
+
+      _safeSetState(() {
+        _destinations = List.from(_allDestinations.take(i + 1));
+        _loadedCount = i + 1;
+        
+        if (i == 0) {
+          _isLoading = false; // Stop main loading after first destination
+          _loadingMessage = 'Loading more destinations...';
+        }
+        
+        if (i == _allDestinations.length - 1) {
+          _isLazyLoading = false;
+          _loadingMessage = '';
+        }
+      });
+
+      // Add a small delay between each destination for smooth animation
+      if (i < _allDestinations.length - 1) {
+        await Future.delayed(const Duration(milliseconds: 200));
+      }
     }
   }
 
@@ -208,22 +297,33 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
   /// Load offline recommendations
   Future<List<Destination>> _loadOfflineRecommendations() async {
     _safeSetState(() {
-      _loadingMessage = 'Loading cached destinations...';
+      _loadingMessage = 'Loading saved destinations...';
     });
 
     final cachedDestinations =
         await OfflineCacheService.getCachedDestinations();
 
     if (cachedDestinations.isNotEmpty) {
+      _safeSetState(() {
+        _loadingMessage = 'Found ${cachedDestinations.length} saved destinations...';
+      });
       return cachedDestinations.take(widget.limit).toList();
     }
 
     _safeSetState(() {
-      _loadingMessage = 'Fetching offline recommendations...';
+      _loadingMessage = 'Searching offline database...';
     });
 
     // Last resort: try offline destinations from Firestore
-    return await _travelService.getOfflineRecommendations(limit: widget.limit);
+    final offlineDestinations = await _travelService.getOfflineRecommendations(limit: widget.limit);
+    
+    _safeSetState(() {
+      _loadingMessage = offlineDestinations.isNotEmpty
+          ? 'Found ${offlineDestinations.length} offline destinations...'
+          : 'No offline destinations available...';
+    });
+
+    return offlineDestinations;
   }
 
   /// Refresh recommendations
@@ -329,6 +429,16 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
                   ),
               textAlign: TextAlign.center,
             ),
+            if (_isLazyLoading && _allDestinations.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  'Loaded $_loadedCount of ${_allDestinations.length} destinations',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -403,27 +513,58 @@ class _RecommendedDestinationsState extends State<RecommendedDestinations> {
         final screenHeight = MediaQuery.of(context).size.height;
         final cardHeight = screenHeight * 0.25; // 25% of screen height
 
-        return SizedBox(
-          height: cardHeight,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: _destinations.length,
-            itemBuilder: (context, index) {
-              final destination = _destinations[index];
-              return DestinationCard(
-                destination: destination,
-                cardHeight: cardHeight,
-                onTap: widget.onDestinationTap != null
-                    ? () =>
-                        widget.onDestinationTap!(destination.id, destination)
-                    : null,
-                showDistance: destination.distanceKm != null,
-                isOfflineAvailable:
-                    destination.isOfflineAvailable || _isOfflineMode,
-              );
-            },
-          ),
+        return Column(
+          children: [
+            SizedBox(
+              height: cardHeight,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _destinations.length,
+                itemBuilder: (context, index) {
+                  final destination = _destinations[index];
+                  return DestinationCard(
+                    destination: destination,
+                    cardHeight: cardHeight,
+                    onTap: widget.onDestinationTap != null
+                        ? () =>
+                            widget.onDestinationTap!(destination.id, destination)
+                        : null,
+                    showDistance: destination.distanceKm != null,
+                    isOfflineAvailable:
+                        destination.isOfflineAvailable || _isOfflineMode,
+                  );
+                },
+              ),
+            ),
+            // Lazy loading progress indicator
+            if (_isLazyLoading && _allDestinations.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Loading $_loadedCount of ${_allDestinations.length}...',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
         );
       },
     );

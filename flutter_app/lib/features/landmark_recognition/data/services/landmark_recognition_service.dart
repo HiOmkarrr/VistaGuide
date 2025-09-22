@@ -170,7 +170,8 @@ class LandmarkRecognitionService {
       );
 
       if (kDebugMode) {
-        print('📱 Camera picker result: ${image != null ? "Image captured: ${image.path}" : "No image captured (cancelled?)"}');
+        print(
+            '📱 Camera picker result: ${image != null ? "Image captured: ${image.path}" : "No image captured (cancelled?)"}');
       }
 
       if (image != null) {
@@ -224,7 +225,8 @@ class LandmarkRecognitionService {
       );
 
       if (kDebugMode) {
-        print('📱 Gallery picker result: ${image != null ? "Image selected: ${image.path}" : "No image selected (cancelled?)"}');
+        print(
+            '📱 Gallery picker result: ${image != null ? "Image selected: ${image.path}" : "No image selected (cancelled?)"}');
       }
 
       if (image != null) {
@@ -289,7 +291,8 @@ class LandmarkRecognitionService {
       final prediction = await recognizeLandmark(imageFile.path);
 
       if (kDebugMode) {
-        print('🔮 Recognition completed. Result: ${prediction?.landmarkName ?? 'null'}');
+        print(
+            '🔮 Recognition completed. Result: ${prediction?.landmarkName ?? 'null'}');
       }
 
       // Dismiss loading dialog
@@ -454,7 +457,8 @@ class LandmarkRecognitionService {
           await _tfLiteService.recognizeLandmark(File(imagePath));
 
       if (kDebugMode) {
-        print('🤖 TensorFlow prediction result: ${prediction?.landmarkName ?? 'null'}');
+        print(
+            '🤖 TensorFlow prediction result: ${prediction?.landmarkName ?? 'null'}');
         print('📊 Confidence: ${prediction?.confidence ?? 'N/A'}');
       }
 
@@ -640,10 +644,11 @@ class LandmarkRecognitionService {
       }
 
       final recognition = await recognizeLandmark(imagePath);
-      
+
       if (recognition != null) {
         if (kDebugMode) {
-          print('✅ Recognition completed successfully: ${recognition.landmarkName} (${(recognition.confidence * 100).toStringAsFixed(1)}%)');
+          print(
+              '✅ Recognition completed successfully: ${recognition.landmarkName} (${(recognition.confidence * 100).toStringAsFixed(1)}%)');
         }
         // Add to recent recognitions
         addRecognition(recognition);

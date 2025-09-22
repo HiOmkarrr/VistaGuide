@@ -151,13 +151,34 @@ Focus on:
         final data = jsonDecode(response.body);
         final content = data['candidates'][0]['content']['parts'][0]['text'];
 
-        // Extract JSON from the response
+        // Extract JSON from the response - handle multiple possible JSON objects
         final jsonStart = content.indexOf('{');
         final jsonEnd = content.lastIndexOf('}') + 1;
 
         if (jsonStart != -1 && jsonEnd > jsonStart) {
           final jsonString = content.substring(jsonStart, jsonEnd);
-          return jsonDecode(jsonString);
+          
+          try {
+            return jsonDecode(jsonString);
+          } catch (jsonError) {
+            // If direct parsing fails, try to clean the JSON
+            print('⚠️ JSON parsing failed, attempting cleanup: $jsonError');
+            
+            // Remove any markdown formatting or extra characters
+            final cleanedJson = jsonString
+                .replaceAll(RegExp(r'```json'), '')
+                .replaceAll(RegExp(r'```'), '')
+                .replaceAll(RegExp(r'^\s*\w+:\s*'), '') // Remove any prefix like "Here's the JSON:"
+                .trim();
+                
+            try {
+              return jsonDecode(cleanedJson);
+            } catch (cleanupError) {
+              print('❌ JSON cleanup also failed: $cleanupError');
+              print('📄 Raw content: ${content.substring(0, 200)}...');
+              return null;
+            }
+          }
         }
       } else {
         print('❌ Gemini API error: ${response.statusCode} - ${response.body}');

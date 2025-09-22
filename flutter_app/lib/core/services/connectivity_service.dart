@@ -58,7 +58,7 @@ class ConnectivityService {
       }
 
       final result = await InternetAddress.lookup('google.com').timeout(
-        const Duration(seconds: 5),
+        const Duration(seconds: 2), // Reduced from 5 to 2 seconds for faster offline detection
       );
 
       final isConnected = result.isNotEmpty && result[0].rawAddress.isNotEmpty;

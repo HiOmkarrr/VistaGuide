@@ -10,7 +10,7 @@ class CacheManagerService {
   CacheManagerService._internal();
 
   // Cache settings
-  static const Duration _aiEnrichmentCacheExpiry = Duration(minutes: 15);
+  static const Duration _aiEnrichmentCacheExpiry = Duration(minutes: 2); // Reduced for testing/development
 
   // Cache keys
   static const String _aiEnrichmentPrefix = 'ai_enrichment_';
@@ -36,6 +36,12 @@ class CacheManagerService {
       }
       await clearAllCache();
       await _prefs?.setInt(_cacheVersionKey, _currentCacheVersion);
+    }
+
+    // TEMPORARY: Clear AI cache for fresh development testing
+    if (kDebugMode) {
+      await clearAllAIEnrichmentCache();
+      print('🧹 Cleared AI cache for fresh testing');
     }
   }
 
