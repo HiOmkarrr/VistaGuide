@@ -50,3 +50,10 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    implementation("org.tensorflow:tensorflow-lite-task-vision:0.4.4")
+    implementation("org.tensorflow:tensorflow-lite-api:2.12.0")
+    // Uncomment if you later enable GPU delegates
+    // implementation("org.tensorflow:tensorflow-lite-gpu:2.12.0")
+}
