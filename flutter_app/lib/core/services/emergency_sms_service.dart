@@ -239,12 +239,10 @@ Please respond or call immediately.''';
 
     try {
       final status = await completer.future.timeout(const Duration(seconds: 20));
-      switch (status) {
-        case SendStatus.SENT:
-        case SendStatus.DELIVERED:
-          return SMSStatus.sent;
-        default:
-          return SMSStatus.failed;
+      if (status == SendStatus.SENT || status == SendStatus.DELIVERED) {
+        return SMSStatus.sent;
+      } else {
+        return SMSStatus.failed;
       }
     } catch (e) {
       debugPrint('⚠️ sendSms status timeout or error: $e');

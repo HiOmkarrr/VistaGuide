@@ -5,7 +5,6 @@
 
 import 'package:flutter/material.dart';
 import '../../../../core/services/gemini_enrichment_service.dart';
-import '../../data/models/destination.dart';
 
 class GeminiTestPage extends StatefulWidget {
   const GeminiTestPage({super.key});

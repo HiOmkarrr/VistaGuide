@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/navigation/app_routes.dart';
 import '../models/destination.dart';
 import '../models/quick_access_item.dart';
 

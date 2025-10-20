@@ -50,6 +50,8 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>VistaGuide needs location access to provide weather information, nearby landmarks, and emergency services.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>VistaGuide needs location access to provide weather information, nearby landmarks, and emergency services.</string>
+	<string>VistaGuide needs location access to provide weather information, nearby landmarks, and emergency services even when the app is in the background.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>VistaGuide requires continuous location access to provide real-time location-based services, weather updates, and emergency assistance.</string>
 </dict>
 </plist>

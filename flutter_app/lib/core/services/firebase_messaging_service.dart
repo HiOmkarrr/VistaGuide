@@ -103,7 +103,6 @@ class FirebaseMessagingService {
   void _handleEmergencyResponse(RemoteMessage message) {
     final responderId = message.data['responder_id'];
     final response = message.data['response'];
-    final location = message.data['location'];
     
     debugPrint('🚨 Emergency response received from $responderId: $response');
     // TODO: Navigate to emergency response screen or show detailed dialog

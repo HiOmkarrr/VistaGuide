@@ -155,29 +155,6 @@ class _DestinationDetailPageState extends State<DestinationDetailPage> {
     }
   }
 
-  Future<void> _updateFromOnlineInBackground() async {
-    try {
-      // Use the new getDestinationById method with AI enrichment for background updates
-      final updatedDestination = await _travelService.getDestinationById(
-        widget.destinationId,
-        enrichWithAI: true, // Enable AI enrichment for latest info
-      );
-
-      if (updatedDestination != null) {
-        await _saveDestinationOffline(updatedDestination);
-        if (mounted) {
-          setState(() {
-            _destination = updatedDestination;
-            _isOfflineMode = false;
-          });
-        }
-      }
-    } catch (e) {
-      // Silent fail for background update
-      print('Background update failed: $e');
-    }
-  }
-
   Future<void> _enhanceWithAIInBackground() async {
     if (_destination == null) return;
 

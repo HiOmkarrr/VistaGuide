@@ -1,8 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:http/http.dart' as http;
+import 'location_permission_service.dart';
 
 /// Weather data model
 class WeatherData {
@@ -44,44 +44,33 @@ class LocationWeatherService {
   factory LocationWeatherService() => _instance;
   LocationWeatherService._internal();
 
-  // OpenWeatherMap API key - you should add this to your .env file
-  static const String _apiKey =
-      'your_api_key_here'; // Replace with actual API key
-  static const String _baseUrl = 'https://api.openweathermap.org/data/2.5';
-
   Position? _currentPosition;
   WeatherData? _currentWeather;
   String? _currentLocationName;
+  final _permissionService = LocationPermissionService();
 
-  /// Check and request location permissions
-  Future<bool> _handleLocationPermission() async {
+  /// Check and request location permissions - now requires "always" permission
+  Future<bool> _handleLocationPermission(BuildContext? context) async {
     bool serviceEnabled;
-    LocationPermission permission;
 
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       return false;
     }
 
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        return false;
-      }
+    // If context is provided, use the new permission service that requires "always" permission
+    if (context != null) {
+      return await _permissionService.ensureAlwaysLocationPermission(context);
     }
 
-    if (permission == LocationPermission.deniedForever) {
-      return false;
-    }
-
-    return true;
+    // Fallback: check if we already have "always" permission
+    return await _permissionService.hasAlwaysLocationPermission();
   }
 
-  /// Get current location
-  Future<Position?> getCurrentLocation() async {
+  /// Get current location - requires BuildContext for permission dialogs
+  Future<Position?> getCurrentLocation({BuildContext? context}) async {
     try {
-      final hasPermission = await _handleLocationPermission();
+      final hasPermission = await _handleLocationPermission(context);
       if (!hasPermission) return null;
 
       _currentPosition = await Geolocator.getCurrentPosition(
@@ -117,10 +106,10 @@ class LocationWeatherService {
     return 'Unknown Location';
   }
 
-  /// Get weather data for current location
-  Future<WeatherData?> getWeatherData() async {
+  /// Get weather data for current location - requires BuildContext for permission dialogs
+  Future<WeatherData?> getWeatherData({BuildContext? context}) async {
     try {
-      final position = await getCurrentLocation();
+      final position = await getCurrentLocation(context: context);
       if (position == null) {
         // Return mock data even if location is not available
         _currentWeather = const WeatherData(

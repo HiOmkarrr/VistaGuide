@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter/foundation.dart';
 import 'core/theme/app_theme.dart';
 import 'core/navigation/app_router.dart';
+import 'core/widgets/permission_gate.dart';
 import 'core/services/magic_lane_service.dart'; // This is actually Magic Lane service now
 import 'core/services/simple_offline_storage_service.dart';
 import 'core/services/firestore_data_seeder.dart';
 import 'core/services/firestore_travel_service.dart';
 import 'core/services/cache_manager_service.dart';
-import 'core/services/network_simulation_service.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -101,11 +100,13 @@ class VistaGuideApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      title: 'VistaGuide',
-      theme: AppTheme.lightTheme,
-      routerConfig: AppRouter.router,
-      debugShowCheckedModeBanner: false,
+    return PermissionGate(
+      child: MaterialApp.router(
+        title: 'VistaGuide',
+        theme: AppTheme.lightTheme,
+        routerConfig: AppRouter.router,
+        debugShowCheckedModeBanner: false,
+      ),
     );
   }
 }
