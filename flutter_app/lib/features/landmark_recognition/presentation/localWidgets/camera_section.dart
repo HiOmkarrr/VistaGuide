@@ -15,7 +15,7 @@ class CameraSection extends StatelessWidget {
     super.key,
     required this.onCameraPressed,
     this.selectedImagePath,
-    this.buttonText = 'Take Photo or Upload',
+    this.buttonText = 'Take Photo',
     this.placeholderText = 'No photo selected',
     this.isEnabled = true,
   });

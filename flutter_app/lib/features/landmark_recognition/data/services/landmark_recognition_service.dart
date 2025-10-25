@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart';
 import '../models/landmark_recognition.dart';
-import 'tensorflow_lite_service.dart';
+import 'hybrid_recognition_service.dart';
+import '../../presentation/localWidgets/landmark_result_widget.dart';
+import '../../presentation/pages/landmark_chatbot_page.dart';
 
 /// Service to manage landmark recognition functionality
 class LandmarkRecognitionService {
@@ -12,7 +14,8 @@ class LandmarkRecognitionService {
   factory LandmarkRecognitionService() => _instance;
   LandmarkRecognitionService._internal();
 
-  final TensorFlowLiteService _tfLiteService = TensorFlowLiteService();
+  final HybridLandmarkRecognitionService _hybridService = 
+      HybridLandmarkRecognitionService();
   final ImagePicker _imagePicker = ImagePicker();
   bool _isModelInitialized = false;
 
@@ -47,29 +50,33 @@ class LandmarkRecognitionService {
     ),
   ];
 
-  /// Initialize the TensorFlow Lite model
+  /// Initialize the Hybrid Recognition Model
+  /// 
+  /// Loads CSV data, embedding model, prototypes, and LLM
   Future<bool> initializeModel() async {
     if (_isModelInitialized) return true;
 
     try {
       if (kDebugMode) {
-        print('🔄 Initializing landmark recognition model...');
+        print('🚀 Initializing hybrid landmark recognition model...');
       }
 
-      final success = await _tfLiteService.initializeModel();
+      // Initialize the hybrid service
+      final success = await _hybridService.initialize();
+
       _isModelInitialized = success;
 
-      if (success) {
+      if (_isModelInitialized) {
         if (kDebugMode) {
-          print('✅ Landmark recognition model initialized');
+          print('✅ Hybrid recognition model initialized successfully');
         }
       } else {
         if (kDebugMode) {
-          print('❌ Failed to initialize landmark recognition model');
+          print('❌ Failed to initialize hybrid recognition model');
         }
       }
 
-      return success;
+      return _isModelInitialized;
     } catch (e) {
       if (kDebugMode) {
         print('❌ Error initializing landmark recognition: $e');
@@ -90,13 +97,13 @@ class LandmarkRecognitionService {
 
   /// Get instructions subtitle
   String getInstructionsSubtitle() {
-    return 'Point your camera at a landmark or select from your gallery.';
+    return 'Point your camera at a landmark to identify it.';
   }
 
-  /// Handle image source selection
+  /// Handle camera button press - directly opens camera
   Future<void> showImageSourceDialog(BuildContext context) async {
     if (kDebugMode) {
-      print('📱 Camera button pressed - showing image source dialog');
+      print('📱 Camera button pressed - opening camera directly');
     }
 
     // Ensure model is initialized
@@ -111,44 +118,8 @@ class LandmarkRecognitionService {
       print('🎯 Model status: ${_isModelInitialized ? "Ready" : "Failed"}');
     }
 
-    return showDialog<void>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Select Image Source'),
-          content: const Text(
-              'Choose how you want to select an image for landmark recognition:'),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Camera'),
-              onPressed: () {
-                if (kDebugMode) {
-                  print('📷 User selected Camera option');
-                }
-                Navigator.of(context).pop();
-                _pickImageFromCamera(context);
-              },
-            ),
-            TextButton(
-              child: const Text('Gallery'),
-              onPressed: () {
-                if (kDebugMode) {
-                  print('🖼️ User selected Gallery option');
-                }
-                Navigator.of(context).pop();
-                _pickImageFromGallery(context);
-              },
-            ),
-            TextButton(
-              child: const Text('Cancel'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
+    // Directly open camera (no dialog)
+    await _pickImageFromCamera(context);
   }
 
   /// Pick image from camera
@@ -197,65 +168,17 @@ class LandmarkRecognitionService {
       if (kDebugMode) {
         print('❌ Error picking image from camera: $e');
       }
-      // Only show snackbar if context is safe to use
+      // Safely dismiss any open dialogs
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) {
-          _showErrorSnackBar(context, 'Failed to capture image from camera');
-        }
-      });
-    }
-  }
-
-  /// Pick image from gallery
-  Future<void> _pickImageFromGallery(BuildContext context) async {
-    if (kDebugMode) {
-      print('🖼️ Starting gallery image picker...');
-    }
-
-    try {
-      if (kDebugMode) {
-        print('🔧 Calling ImagePicker.pickImage() with gallery source...');
-      }
-
-      final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1024,
-        maxHeight: 1024,
-        imageQuality: 85,
-      );
-
-      if (kDebugMode) {
-        print(
-            '📱 Gallery picker result: ${image != null ? "Image selected: ${image.path}" : "No image selected (cancelled?)"}');
-      }
-
-      if (image != null) {
-        if (kDebugMode) {
-          print('✅ Image selected successfully, processing...');
-        }
-        // Check if context is still mounted before proceeding
-        if (context.mounted) {
-          await _processSelectedImage(context, File(image.path));
-        } else {
-          if (kDebugMode) {
-            print('⚠️ Context not mounted, using context-free processing');
+          try {
+            // Try to pop any open dialogs
+            Navigator.of(context, rootNavigator: true).popUntil((route) => route.isFirst);
+          } catch (navError) {
+            if (kDebugMode) {
+              print('⚠️ Could not dismiss dialogs: $navError');
+            }
           }
-          // Use context-free processing
-          await processImageWithoutUI(image.path);
-        }
-      } else {
-        if (kDebugMode) {
-          print('❌ No image selected - user cancelled or error occurred');
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Error picking image from gallery: $e');
-      }
-      // Only show snackbar if context is safe to use
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (context.mounted) {
-          _showErrorSnackBar(context, 'Failed to select image from gallery');
         }
       });
     }
@@ -267,11 +190,12 @@ class LandmarkRecognitionService {
     // Check if context is still mounted before showing dialog
     if (!context.mounted) return;
 
-    // Show loading dialog
+    // Show loading dialog using root navigator for go_router compatibility
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const AlertDialog(
+      useRootNavigator: true,
+      builder: (dialogContext) => const AlertDialog(
         content: Row(
           children: [
             CircularProgressIndicator(),
@@ -295,32 +219,46 @@ class LandmarkRecognitionService {
             '🔮 Recognition completed. Result: ${prediction?.landmarkName ?? 'null'}');
       }
 
-      // Dismiss loading dialog
+      // Dismiss loading dialog safely FIRST
       if (context.mounted) {
-        Navigator.of(context).pop();
+        try {
+          Navigator.of(context, rootNavigator: true).pop();
+        } catch (e) {
+          if (kDebugMode) {
+            print('⚠️ Could not dismiss loading dialog: $e');
+          }
+        }
       }
 
       if (prediction != null) {
         if (kDebugMode) {
           print('✅ Showing results for: ${prediction.landmarkName}');
         }
-        // Show results dialog
-        if (context.mounted) {
-          _showRecognitionResults(context, prediction);
-        }
+        // Show results dialog with imageFile
+        // Use addPostFrameCallback to ensure safe navigation after dialog dismissal
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) {
+            _showRecognitionResults(context, prediction, imageFile);
+          }
+        });
       } else {
         if (kDebugMode) {
           print('❌ No prediction result, showing error');
         }
         if (context.mounted) {
-          _showErrorSnackBar(
-              context, 'Could not recognize landmark in this image');
+          _showNoMatchDialog(context);
         }
       }
     } catch (e) {
-      // Dismiss loading dialog
+      // Dismiss loading dialog safely
       if (context.mounted) {
-        Navigator.of(context).pop();
+        try {
+          Navigator.of(context, rootNavigator: true).pop();
+        } catch (navError) {
+          if (kDebugMode) {
+            print('⚠️ Could not dismiss loading dialog: $navError');
+          }
+        }
       }
 
       if (kDebugMode) {
@@ -333,60 +271,119 @@ class LandmarkRecognitionService {
     }
   }
 
-  /// Show recognition results
+  /// Show recognition results using the custom result widget
   void _showRecognitionResults(
-      BuildContext context, LandmarkRecognition recognition) {
+      BuildContext context, LandmarkRecognition recognition, File imageFile) {
     // Check if context is still mounted before showing dialog
+    if (!context.mounted) return;
+
+    // Extract landmark ID from recognition
+    final landmarkId = int.tryParse(recognition.id) ?? 0;
+
+    showLandmarkResultDialog(
+      context: context,
+      imageFile: imageFile,
+      recognition: recognition,
+      onLearnMore: () {
+        // For go_router, we need to get the root navigator context
+        // Close dialog using root navigator to avoid go_router conflicts
+        final navigator = Navigator.of(context, rootNavigator: true);
+        if (navigator.canPop()) {
+          navigator.pop();
+        }
+        
+        // Navigate to chatbot page after a short delay
+        Future.delayed(const Duration(milliseconds: 150), () {
+          if (context.mounted) {
+            Navigator.of(context, rootNavigator: true).push(
+              MaterialPageRoute(
+                builder: (context) => LandmarkChatbotPage(
+                  recognition: recognition,
+                  landmarkId: landmarkId,
+                ),
+              ),
+            );
+          }
+        });
+      },
+    );
+  }
+
+  /// Show dialog when no landmark match is found
+  void _showNoMatchDialog(BuildContext context) {
     if (!context.mounted) return;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('🏛️ ${recognition.landmarkName}'),
+      useRootNavigator: true, // Use root navigator for go_router compatibility
+      builder: (dialogContext) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.orange, size: 28),
+            SizedBox(width: 12),
+            Text('No Match Found'),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Confidence: ${(recognition.confidence * 100).toStringAsFixed(1)}%',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+            const Text(
+              'Could not recognize a landmark in this image.',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'This could happen if:',
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            Text(recognition.description ?? 'No description available'),
-            if (recognition.location != null &&
-                recognition.location!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text('📍 ${recognition.location}'),
-            ],
-            if (recognition.tags.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 4,
-                children: recognition.tags
-                    .map((tag) => Chip(
-                          label: Text(tag),
-                          backgroundColor:
-                              Theme.of(context).primaryColor.withOpacity(0.1),
-                        ))
-                    .toList(),
+            _buildTipItem('• The image doesn\'t contain a clear view of a landmark'),
+            _buildTipItem('• The landmark is not in our database'),
+            _buildTipItem('• The image quality is too low'),
+            _buildTipItem('• The landmark is partially obstructed'),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
               ),
-            ],
+              child: const Row(
+                children: [
+                  Icon(Icons.lightbulb_outline, color: Colors.blue, size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Try capturing a clearer photo of the landmark from a better angle with enough zoom on the actual landmark.',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-          ElevatedButton(
             onPressed: () {
-              Navigator.of(context).pop();
-              // Could navigate to more details or save to favorites
+              final navigator = Navigator.of(context, rootNavigator: true);
+              if (navigator.canPop()) {
+                navigator.pop();
+              }
             },
-            child: const Text('Learn More'),
+            child: const Text('Got it'),
           ),
         ],
       ),
+    );
+  }
+
+  /// Helper to build tip items
+  Widget _buildTipItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8, bottom: 4),
+      child: Text(text, style: const TextStyle(fontSize: 14)),
     );
   }
 
@@ -425,63 +422,49 @@ class LandmarkRecognitionService {
     }
   }
 
-  /// Process image for landmark recognition
+  /// Process image for landmark recognition using hybrid GPS + Image recognition
+  /// 
+  /// Uses HybridLandmarkRecognitionService to combine GPS and visual data
   Future<LandmarkRecognition?> recognizeLandmark(String imagePath) async {
     try {
       if (kDebugMode) {
-        print('🎯 Starting landmark recognition for: $imagePath');
+        print('🔍 Starting hybrid landmark recognition...');
+        print('📸 Image path: $imagePath');
       }
 
-      if (!_isModelInitialized) {
-        if (kDebugMode) {
-          print('⚠️ Model not initialized, initializing now...');
-        }
-        await initializeModel();
-      }
+      // Run hybrid recognition with File object
+      final result = await _hybridService.recognizeLandmark(File(imagePath));
 
-      if (!_isModelInitialized) {
+      if (!result.success) {
         if (kDebugMode) {
-          print('❌ Model not initialized for landmark recognition');
+          print('❌ No matching landmark found');
         }
         return null;
       }
 
-      if (kDebugMode) {
-        print('🔍 Processing image: $imagePath');
-        print('📱 File exists: ${await File(imagePath).exists()}');
-        print('📏 File size: ${await File(imagePath).length()} bytes');
-      }
-
-      // Use TensorFlow Lite service to recognize landmark
-      final prediction =
-          await _tfLiteService.recognizeLandmark(File(imagePath));
-
-      if (kDebugMode) {
-        print(
-            '🤖 TensorFlow prediction result: ${prediction?.landmarkName ?? 'null'}');
-        print('📊 Confidence: ${prediction?.confidence ?? 'N/A'}');
-      }
-
-      if (prediction == null) {
-        if (kDebugMode) {
-          print('❌ No prediction returned from TensorFlow Lite service');
-        }
-        return null;
-      }
-
-      // Create LandmarkRecognition object
+      // Convert RecognitionResult to LandmarkRecognition model
       final recognition = LandmarkRecognition(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        landmarkName: prediction.landmarkName,
-        description: _getDescription(prediction.landmarkName),
-        confidence: prediction.confidence,
+        id: result.landmarkId?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        landmarkName: result.landmarkName,
+        description: result.landmarkInfo,
+        confidence: result.confidenceScore,
         recognizedAt: DateTime.now(),
-        location: _getLocation(prediction.landmarkName),
-        tags: _getTags(prediction.landmarkName),
+        location: 'India', // Can enhance with city/state from landmark data
+        tags: [
+          'Confidence: ${(result.confidenceScore * 100).toStringAsFixed(1)}%',
+          if (result.visualScore != null) 'Visual: ${(result.visualScore! * 100).toStringAsFixed(1)}%',
+          if (result.gpsScore != null && result.gpsScore! > 0) 'GPS: ${(result.gpsScore! * 100).toStringAsFixed(1)}%',
+          if (result.bonusApplied) 'GPS+Visual Match ✓',
+        ],
       );
 
       // Add to recent recognitions
       addRecognition(recognition);
+
+      if (kDebugMode) {
+        print('✅ Recognition complete: ${recognition.landmarkName}');
+        print('📊 Confidence: ${(recognition.confidence * 100).toStringAsFixed(1)}%');
+      }
 
       return recognition;
     } catch (e) {
@@ -490,111 +473,6 @@ class LandmarkRecognitionService {
       }
       return null;
     }
-  }
-
-  /// Get description for a landmark
-  String _getDescription(String landmarkName) {
-    final descriptions = {
-      'Eiffel Tower':
-          'Iconic iron lattice tower in Paris, France, built by Gustave Eiffel in 1889.',
-      'Statue of Liberty':
-          'Symbol of freedom and democracy in New York Harbor, a gift from France to the United States.',
-      'Big Ben':
-          'Famous clock tower in London, England, officially known as Elizabeth Tower.',
-      'Taj Mahal':
-          'Magnificent marble mausoleum in Agra, India, built by emperor Shah Jahan.',
-      'Sydney Opera House':
-          'Distinctive performing arts venue in Sydney, Australia, known for its unique architecture.',
-      'Great Wall of China':
-          'Ancient fortification system in northern China, built to protect against invasions.',
-      'Colosseum':
-          'Ancient amphitheater in Rome, Italy, where gladiatorial contests were held.',
-      'Machu Picchu':
-          'Ancient Incan citadel in Peru, set high in the Andes Mountains.',
-      'Christ the Redeemer':
-          'Art Deco statue of Jesus Christ overlooking Rio de Janeiro, Brazil.',
-      'Petra':
-          'Archaeological site in Jordan, famous for its rock-cut architecture.',
-      'Golden Gate Bridge':
-          'Iconic suspension bridge connecting San Francisco to Marin County.',
-      'Empire State Building':
-          'Art Deco skyscraper in Manhattan, New York City.',
-      'Tower Bridge':
-          'Bascule and suspension bridge crossing the River Thames in London.',
-      'Mount Rushmore':
-          'Memorial featuring carved faces of four US presidents in South Dakota.',
-      'Sagrada Familia':
-          'Basilica in Barcelona, Spain, designed by architect Antoni Gaudí.',
-    };
-
-    return descriptions[landmarkName] ??
-        'A notable landmark with historical and cultural significance.';
-  }
-
-  /// Get location for a landmark
-  String _getLocation(String landmarkName) {
-    final locations = {
-      'Eiffel Tower': 'Paris, France',
-      'Statue of Liberty': 'New York, USA',
-      'Big Ben': 'London, England',
-      'Taj Mahal': 'Agra, India',
-      'Sydney Opera House': 'Sydney, Australia',
-      'Great Wall of China': 'Northern China',
-      'Colosseum': 'Rome, Italy',
-      'Machu Picchu': 'Cusco Region, Peru',
-      'Christ the Redeemer': 'Rio de Janeiro, Brazil',
-      'Petra': 'Ma\'an, Jordan',
-      'Golden Gate Bridge': 'San Francisco, USA',
-      'Empire State Building': 'New York, USA',
-      'Tower Bridge': 'London, England',
-      'Mount Rushmore': 'South Dakota, USA',
-      'Sagrada Familia': 'Barcelona, Spain',
-    };
-
-    return locations[landmarkName] ?? 'Unknown Location';
-  }
-
-  /// Get tags for a landmark
-  List<String> _getTags(String landmarkName) {
-    final tags = {
-      'Eiffel Tower': [
-        'Architecture',
-        'Historic',
-        'Tourist Attraction',
-        'Iron Structure'
-      ],
-      'Statue of Liberty': ['Monument', 'Historic', 'Symbol', 'Freedom'],
-      'Big Ben': ['Architecture', 'Clock Tower', 'Historic', 'Gothic Revival'],
-      'Taj Mahal': ['Architecture', 'Mausoleum', 'UNESCO', 'Marble'],
-      'Sydney Opera House': [
-        'Architecture',
-        'Modern',
-        'Performing Arts',
-        'Iconic'
-      ],
-      'Great Wall of China': ['Historic', 'Fortification', 'UNESCO', 'Ancient'],
-      'Colosseum': ['Ancient', 'Architecture', 'Amphitheater', 'UNESCO'],
-      'Machu Picchu': ['Ancient', 'Incan', 'Mountain', 'UNESCO'],
-      'Christ the Redeemer': ['Religious', 'Art Deco', 'Monument', 'Mountain'],
-      'Petra': ['Ancient', 'Archaeological', 'Rock-cut', 'UNESCO'],
-      'Golden Gate Bridge': ['Bridge', 'Suspension', 'Engineering', 'Iconic'],
-      'Empire State Building': [
-        'Skyscraper',
-        'Art Deco',
-        'Historic',
-        'Architecture'
-      ],
-      'Tower Bridge': ['Bridge', 'Victorian', 'Engineering', 'Historic'],
-      'Mount Rushmore': ['Monument', 'Presidential', 'Sculpture', 'Mountain'],
-      'Sagrada Familia': [
-        'Religious',
-        'Architecture',
-        'Modernist',
-        'Unfinished'
-      ],
-    };
-
-    return tags[landmarkName] ?? ['Landmark', 'Historic'];
   }
 
   /// Add a new recognition to recent list
@@ -669,6 +547,6 @@ class LandmarkRecognitionService {
 
   /// Dispose resources
   void dispose() {
-    _tfLiteService.dispose();
+    _hybridService.dispose();
   }
 }

@@ -31,7 +31,7 @@ class _LandmarkRecognitionPageState extends State<LandmarkRecognitionPage> {
   Future<void> _initializeModel() async {
     setState(() {
       _isModelLoading = true;
-      _loadingMessage = 'Loading TensorFlow Lite model...';
+      _loadingMessage = 'Loading Resources Please Wait...';
     });
 
     try {
@@ -124,7 +124,7 @@ class _LandmarkRecognitionPageState extends State<LandmarkRecognitionPage> {
                         Expanded(
                           child: Text(
                             _recognitionService.isModelInitialized
-                                ? 'AI Model Ready - Powered by TensorFlow Lite'
+                                ? 'Ready to click'
                                 : 'AI Model Unavailable - Using fallback mode',
                             style: TextStyle(
                               color: _recognitionService.isModelInitialized

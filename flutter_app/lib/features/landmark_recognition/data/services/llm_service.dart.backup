@@ -1,0 +1,206 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+
+
+/// Service for using Gemma-3 LLM model via Mediapipe to format/generate landmark information
+/// 
+/// Uses Google's Mediapipe LLM Inference API for Gemma model support
+class LlmService {
+  static final LlmService _instance = LlmService._internal();
+  factory LlmService() => _instance;
+  LlmService._internal();
+
+  dynamic? _dynamic;
+  bool _isModelLoaded = false;
+
+  /// Initialize the Gemma LLM model via Mediapipe
+  Future<bool> initializeModel() async {
+    if (_isModelLoaded) return true;
+
+    try {
+      if (kDebugMode) {
+        print('🔄 Loading Gemma LLM model via Mediapipe...');
+        print('📦 Model: gemma3-1B-it-int4.tflite (500MB)');
+      }
+
+      // Load model from assets
+      final modelAsset = await rootBundle.load(
+        'assets/models/gemma3-1B-it-int4.tflite',
+      );
+
+      // Create LLM inference instance with Mediapipe
+      _dynamic = await dynamic.createFromBuffer(
+        modelAsset.buffer.asUint8List(),
+        maxTokens: 512,        // Maximum tokens to generate
+        topK: 40,              // Top-K sampling
+        temperature: 0.8,      // Temperature for randomness (0.0-1.0)
+        randomSeed: 42,        // For reproducible results
+      );
+
+      _isModelLoaded = true;
+
+      if (kDebugMode) {
+        print('✅ Gemma LLM model loaded successfully via Mediapipe');
+      }
+
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error loading Gemma LLM model: $e');
+        print('💡 Falling back to smart text extraction');
+      }
+      _isModelLoaded = false;
+      return false;
+    }
+  }
+
+  /// Generate text response using Gemma LLM
+  /// 
+  /// Returns null if generation fails, allowing fallback to rule-based responses
+  Future<String?> generateText({
+    required String prompt,
+    int maxTokens = 256,
+  }) async {
+    if (!_isModelLoaded || _dynamic == null) {
+      if (kDebugMode) {
+        print('⚠️ LLM model not loaded, using fallback responses');
+      }
+      return null; // Trigger fallback
+    }
+
+    try {
+      if (kDebugMode) {
+        print('🤖 Generating response with Gemma...');
+        print('� Prompt length: ${prompt.length} characters');
+      }
+
+      // Generate response using Mediapipe LLM Inference
+      final response = await _dynamic!.generateResponse(prompt);
+
+      if (response.isEmpty) {
+        if (kDebugMode) {
+          print('⚠️ Empty response from LLM');
+        }
+        return null;
+      }
+
+      if (kDebugMode) {
+        print('✅ Generated ${response.length} characters');
+      }
+
+      return response.trim();
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error generating text: $e');
+      }
+      return null; // Trigger fallback
+    }
+  }
+
+  /// Format raw landmark information into presentable text
+  /// 
+  /// Takes raw landmark_info from CSV and formats it nicely
+  Future<String> formatLandmarkInfo(String rawInfo, String landmarkName) async {
+    if (!_isModelLoaded || _dynamic == null) {
+      if (kDebugMode) {
+        print('⚠️ LLM model not loaded, returning cleaned info');
+      }
+      return _cleanupRawInfo(rawInfo);
+    }
+
+    try {
+      final prompt = '''Format this landmark information clearly and concisely (max 150 words):
+
+Landmark: $landmarkName
+
+Information: $rawInfo
+
+Formatted:''';
+
+      final result = await generateText(prompt: prompt, maxTokens: 200);
+
+      if (result == null || result.isEmpty) {
+        return _cleanupRawInfo(rawInfo);
+      }
+
+      return result;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error formatting with LLM: $e');
+      }
+      return _cleanupRawInfo(rawInfo);
+    }
+  }
+
+  /// Generate landmark information when CSV info is empty
+  /// 
+  /// Uses the LLM to create descriptive text about the landmark
+  Future<String> generateLandmarkInfo(String landmarkName) async {
+    if (!_isModelLoaded || _dynamic == null) {
+      if (kDebugMode) {
+        print('⚠️ LLM model not loaded, returning placeholder');
+      }
+      return 'Information about $landmarkName. This landmark is located in India and is a notable site of historical or cultural significance.';
+    }
+
+    try {
+      final prompt = '''Provide a brief description of this Indian landmark (max 120 words):
+
+Landmark: $landmarkName
+
+Include: location, historical significance, key features.
+
+Description:''';
+
+      final result = await generateText(prompt: prompt, maxTokens: 180);
+
+      if (result == null || result.isEmpty) {
+        return 'Information about $landmarkName. Please try again or search online for more details.';
+      }
+
+      return result;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Error generating with LLM: $e');
+      }
+      return 'Information about $landmarkName is currently unavailable.';
+    }
+  }
+
+  /// Cleanup raw landmark info (fallback when LLM not available)
+  String _cleanupRawInfo(String rawInfo) {
+    if (rawInfo.isEmpty) {
+      return '';
+    }
+
+    // Remove excessive whitespace
+    String cleaned = rawInfo.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+    // Limit length
+    if (cleaned.length > 500) {
+      cleaned = cleaned.substring(0, 497) + '...';
+    }
+
+    // Split into sentences and take first few
+    final sentences = cleaned.split(RegExp(r'[.!?]\s+'));
+    if (sentences.length > 4) {
+      cleaned = sentences.take(4).join('. ') + '.';
+    }
+
+    return cleaned;
+  }
+
+  /// Check if model is loaded
+  bool get isModelLoaded => _isModelLoaded;
+
+  /// Dispose resources
+  void dispose() {
+    _dynamic?.close();
+    _dynamic = null;
+    _isModelLoaded = false;
+    
+    if (kDebugMode) {
+      print('🗑️ LLM service disposed');
+    }
+  }
+}

@@ -27,7 +27,7 @@ android {
         applicationId = "com.example.vistaguide"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 23
+        minSdk = 24  // Required by MediaPipe tasks-genai
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -56,4 +56,12 @@ dependencies {
     implementation("org.tensorflow:tensorflow-lite-api:2.12.0")
     // Uncomment if you later enable GPU delegates
     // implementation("org.tensorflow:tensorflow-lite-gpu:2.12.0")
+    
+    // Google ML Kit for Generative AI (Gemma support)
+    implementation("com.google.ai.client.generativeai:generativeai:0.1.2")
+    // MediaPipe GenAI - Using version from flutter_gemma (v0.10.24 for better .task support)
+    implementation("com.google.mediapipe:tasks-genai:0.10.24")
+    
+    // Kotlin coroutines for async operations
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 }

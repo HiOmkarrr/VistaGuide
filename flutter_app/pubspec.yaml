@@ -62,14 +62,22 @@ dependencies:
 
   # For battery level in emergency messages
   battery_plus: ^6.2.3
+  
+  # For connectivity checking
+  connectivity_plus: ^6.0.5
+  
   # For file path utilities (used in SQLite/db paths)
   path: ^1.9.0
 
-  # For TensorFlow Lite model inference
-  tflite_flutter: ^0.11.0
+  # For landmark recognition system
+  tflite_flutter: ^0.11.0  # For embedding model only
+  csv: ^6.0.0  # For parsing CSV files
   
   # For image processing
   image: ^3.3.0
+  
+  # For vector math (cosine similarity)
+  vector_math: ^2.1.4
 
   cupertino_icons: ^1.0.2
 
@@ -85,3 +93,4 @@ flutter:
     - .env
     - assets/images/
     - assets/models/
+    - assets/dataset/
