@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
+import '../../../../core/services/dynamic_image_service.dart';
 import '../../data/models/destination.dart';
 
-/// Enhanced destination card widget with responsive design and additional features
-class DestinationCard extends StatelessWidget {
+/// Enhanced destination card widget with responsive design and dynamic images
+class DestinationCard extends StatefulWidget {
   final Destination destination;
   final double cardHeight;
   final VoidCallback? onTap;
@@ -21,19 +23,74 @@ class DestinationCard extends StatelessWidget {
   });
 
   @override
+  State<DestinationCard> createState() => _DestinationCardState();
+}
+
+class _DestinationCardState extends State<DestinationCard> {
+  final DynamicImageService _imageService = DynamicImageService();
+  String? _imageUrl;
+  bool _isLoadingImage = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadImage();
+  }
+
+  /// Load image dynamically
+  Future<void> _loadImage() async {
+    // Check if image is already cached
+    final cachedUrl = _imageService.getCachedImageUrl(widget.destination.id);
+    if (cachedUrl != null) {
+      setState(() {
+        _imageUrl = cachedUrl;
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoadingImage = true;
+    });
+
+    try {
+      final imageUrl = await _imageService.getDestinationImageUrl(
+        destinationId: widget.destination.id,
+        destinationName: widget.destination.title,
+        firestoreImageUrl: widget.destination.imageUrl,
+        firestoreImages: widget.destination.images,
+        destinationType: widget.destination.type,
+      );
+
+      if (mounted) {
+        setState(() {
+          _imageUrl = imageUrl;
+          _isLoadingImage = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading image for ${widget.destination.title}: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingImage = false;
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final cardWidth = screenWidth * 0.7; // 70% of screen width
-    final imageHeight = cardHeight * 0.6; // 60% of card height
+    final imageHeight = widget.cardHeight * 0.6; // 60% of card height
     final iconSize = imageHeight * 0.4; // 40% of image height
 
     return Container(
       width: cardWidth,
-      height: cardHeight,
+      height: widget.cardHeight,
       margin: EdgeInsets.only(right: screenWidth * 0.04),
       child: Card(
         child: InkWell(
-          onTap: onTap,
+          onTap: widget.onTap,
           borderRadius: BorderRadius.circular(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,7 +101,7 @@ class DestinationCard extends StatelessWidget {
               ),
               Expanded(
                 flex: 2,
-                child: _buildContent(screenWidth, cardHeight),
+                child: _buildContent(screenWidth, widget.cardHeight),
               ),
             ],
           ),
@@ -61,15 +118,60 @@ class DestinationCard extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          Center(
-            child: Icon(
-              Icons.image,
-              size: iconSize,
-              color: AppColors.grey500,
+          // Image with CachedNetworkImage
+          if (_imageUrl != null)
+            ClipRRect(
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
+              child: CachedNetworkImage(
+                imageUrl: _imageUrl!,
+                width: double.infinity,
+                height: double.infinity,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  color: AppColors.grey200,
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppColors.primary.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ),
+                ),
+                errorWidget: (context, url, error) => Center(
+                  child: Icon(
+                    Icons.image_not_supported,
+                    size: iconSize,
+                    color: AppColors.grey500,
+                  ),
+                ),
+              ),
+            )
+          else if (_isLoadingImage)
+            Container(
+              color: AppColors.grey200,
+              child: Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    AppColors.primary.withValues(alpha: 0.7),
+                  ),
+                ),
+              ),
+            )
+          else
+            // Fallback placeholder
+            Center(
+              child: Icon(
+                Icons.image,
+                size: iconSize,
+                color: AppColors.grey500,
+              ),
             ),
-          ),
+
           // Rating badge
-          if (destination.rating != null)
+          if (widget.destination.rating != null)
             Positioned(
               top: 8,
               right: 8,
@@ -89,7 +191,7 @@ class DestinationCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 2),
                     Text(
-                      destination.rating!.toStringAsFixed(1),
+                      widget.destination.rating!.toStringAsFixed(1),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 12,
@@ -100,8 +202,9 @@ class DestinationCard extends StatelessWidget {
                 ),
               ),
             ),
+
           // Offline indicator
-          if (isOfflineAvailable)
+          if (widget.isOfflineAvailable)
             Positioned(
               top: 8,
               left: 8,
@@ -118,8 +221,9 @@ class DestinationCard extends StatelessWidget {
                 ),
               ),
             ),
+
           // Distance indicator
-          if (showDistance && destination.distanceKm != null)
+          if (widget.showDistance && widget.destination.distanceKm != null)
             Positioned(
               bottom: 8,
               left: 8,
@@ -139,7 +243,7 @@ class DestinationCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 2),
                     Text(
-                      '${destination.distanceKm!.toStringAsFixed(1)}km',
+                      '${widget.destination.distanceKm!.toStringAsFixed(1)}km',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 11,
@@ -164,7 +268,7 @@ class DestinationCard extends StatelessWidget {
         children: [
           Flexible(
             child: Text(
-              destination.title,
+              widget.destination.title,
               style: AppTextStyles.h4.copyWith(
                 fontSize: screenWidth * 0.04,
               ),
@@ -175,7 +279,7 @@ class DestinationCard extends StatelessWidget {
           const SizedBox(height: 4),
           Flexible(
             child: Text(
-              destination.subtitle,
+              widget.destination.subtitle,
               style: AppTextStyles.bodySmall.copyWith(
                 fontSize: screenWidth * 0.03,
               ),
@@ -184,7 +288,7 @@ class DestinationCard extends StatelessWidget {
             ),
           ),
           // Show destination type if available
-          if (destination.type != 'attraction')
+          if (widget.destination.type != 'attraction')
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Container(
@@ -194,7 +298,7 @@ class DestinationCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  destination.type.toUpperCase(),
+                  widget.destination.type.toUpperCase(),
                   style: TextStyle(
                     fontSize: screenWidth * 0.025,
                     fontWeight: FontWeight.w600,
@@ -208,3 +312,4 @@ class DestinationCard extends StatelessWidget {
     );
   }
 }
+
