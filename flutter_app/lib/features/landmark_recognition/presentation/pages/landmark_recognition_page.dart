@@ -63,7 +63,8 @@ class _LandmarkRecognitionPageState extends State<LandmarkRecognitionPage> {
 
   @override
   void dispose() {
-    _recognitionService.dispose();
+    // Don't dispose the recognition service as it's a singleton
+    // that should persist throughout the app lifecycle
     super.dispose();
   }
 

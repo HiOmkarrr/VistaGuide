@@ -58,11 +58,11 @@ class HybridLandmarkRecognitionService {
   static const double bonus = 0.3;  // Bonus when both match
   
   // Stricter thresholds for better accuracy
-  static const double confidenceThreshold = 0.7;  // Overall confidence (lowered for GPS-heavy scenarios)
+  static const double confidenceThreshold = 0.63;  // Overall confidence (lowered for GPS-heavy scenarios)
   static const double visualScoreThreshold = 0.6;  // Visual-only threshold
   static const double minCosineSimilarity = 0.2;  // Minimum raw similarity (lowered for better matching)
   static const double nearbyRadius = 10.0;         // Initial search radius (km)
-  static const double expandedRadius = 20.0;       // Fallback radius (km)
+  static const double expandedRadius = 25.0;       // Fallback radius (km)
 
   Map<int, List<double>>? _prototypes;
 
@@ -364,6 +364,20 @@ class HybridLandmarkRecognitionService {
   /// Prioritizes cached nearby landmarks if available
   Future<Map<String, dynamic>> _imageBasedRecognition(File imageFile) async {
     try {
+      // Ensure embedding model is loaded (re-initialize if needed)
+      if (!_embeddingService.isModelLoaded) {
+        if (kDebugMode) {
+          print('⚠️ Embedding model was unloaded, re-initializing...');
+        }
+        final reloaded = await _embeddingService.initializeModel();
+        if (!reloaded) {
+          if (kDebugMode) {
+            print('❌ Failed to re-initialize embedding model');
+          }
+          return {'landmarkId': null, 'visualScore': 0.0};
+        }
+      }
+
       // Generate image embedding
       final embedding = await _embeddingService.generateEmbedding(imageFile);
 

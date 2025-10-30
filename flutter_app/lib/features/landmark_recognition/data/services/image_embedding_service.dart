@@ -13,6 +13,9 @@ class ImageEmbeddingService {
   Interpreter? _interpreter;
   bool _isModelLoaded = false;
 
+  /// Check if model is loaded
+  bool get isModelLoaded => _isModelLoaded;
+
   /// Initialize the embedding model
   Future<bool> initializeModel() async {
     if (_isModelLoaded) {
