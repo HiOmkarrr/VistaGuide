@@ -8,6 +8,7 @@ import '../utils/distance_calculator.dart';
 import 'landmark_csv_service.dart';
 import 'image_embedding_service.dart';
 import 'llm_service.dart';
+import '../../../profile/data/services/preferences_service.dart';
 
 /// Result of landmark recognition with scores
 class RecognitionResult {
@@ -179,6 +180,15 @@ class HybridLandmarkRecognitionService {
   /// Update cache of nearby landmarks (should be called every 2 minutes in background)
   Future<void> updateNearbyCache() async {
     try {
+      // Get user's preferred radius
+      final preferencesService = PreferencesService();
+      final userRadius = await preferencesService.getLandmarkRecognitionRadius();
+      final expandedUserRadius = userRadius * 2; // Double the radius for fallback
+      
+      if (kDebugMode) {
+        print('📍 Using user-defined search radius: $userRadius km');
+      }
+      
       // Get current location
       final location = loc.Location();
       final hasPermission = await location.hasPermission();
@@ -199,22 +209,22 @@ class HybridLandmarkRecognitionService {
         return;
       }
 
-      // Get landmarks within radius - try expanded radius if none found
+      // Get landmarks within user's preferred radius
       _cachedNearbyLandmarks = await _csvService.getLandmarksNearby(
         latitude: locationData.latitude!,
         longitude: locationData.longitude!,
-        radiusKm: nearbyRadius,
+        radiusKm: userRadius,
       );
 
       // If no landmarks found within initial radius, expand search
       if (_cachedNearbyLandmarks.isEmpty) {
         if (kDebugMode) {
-          print('⚠️ No landmarks within ${nearbyRadius}km, expanding to ${expandedRadius}km...');
+          print('⚠️ No landmarks within ${userRadius}km, expanding to ${expandedUserRadius}km...');
         }
         _cachedNearbyLandmarks = await _csvService.getLandmarksNearby(
           latitude: locationData.latitude!,
           longitude: locationData.longitude!,
-          radiusKm: expandedRadius,
+          radiusKm: expandedUserRadius,
         );
       }
 

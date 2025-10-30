@@ -7,8 +7,9 @@ import 'package:http/http.dart' as http;
 /// Core service for interacting with Google's Gemini AI API
 /// Provides both package-based and direct HTTP API approaches
 class GeminiService {
+  // Use v1beta API with correct model name
   static const String _baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
-  static const String _model = 'gemini-1.5-flash';
+  static const String _modelName = 'gemini-2.5-flash';
   
   late final String _apiKey;
   GenerativeModel? _generativeModel;
@@ -27,13 +28,13 @@ class GeminiService {
     try {
       // Initialize the Gemini model using the package
       _generativeModel = GenerativeModel(
-        model: _model,
+        model: _modelName,
         apiKey: _apiKey,
         generationConfig: GenerationConfig(
           temperature: 0.7,
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 8192,
         ),
       );
       debugPrint('✅ Gemini service initialized successfully');
@@ -79,7 +80,8 @@ class GeminiService {
     try {
       debugPrint('🚀 Generating content with Gemini (HTTP)...');
       
-      final url = Uri.parse('$_baseUrl/$_model:generateContent?key=$_apiKey');
+      // Correct URL format matching official Gemini API
+      final url = Uri.parse('$_baseUrl/$_modelName:generateContent');
       
       final requestBody = {
         'contents': [{
@@ -89,7 +91,7 @@ class GeminiService {
           'temperature': 0.7,
           'topK': 40,
           'topP': 0.95,
-          'maxOutputTokens': 2048,
+          'maxOutputTokens': 8192,
         }
       };
       
@@ -97,6 +99,7 @@ class GeminiService {
         url,
         headers: {
           'Content-Type': 'application/json',
+          'x-goog-api-key': _apiKey,
         },
         body: jsonEncode(requestBody),
       );

@@ -25,11 +25,53 @@ class EmergencyContacts {
 class PlaceEvent {
   final String name;
   final String type;
+  final bool isUnderrated;
+  final String? description;
+  final String? location;
+  final int? underratedScore;
+  final String? estimatedCost;
 
   const PlaceEvent({
     required this.name,
     required this.type,
+    this.isUnderrated = false,
+    this.description,
+    this.location,
+    this.underratedScore,
+    this.estimatedCost,
   });
+
+  /// Create a regular place event (from Gemini)
+  factory PlaceEvent.regular({
+    required String name,
+    required String type,
+  }) {
+    return PlaceEvent(
+      name: name,
+      type: type,
+      isUnderrated: false,
+    );
+  }
+
+  /// Create an underrated place event (from CSV)
+  factory PlaceEvent.underrated({
+    required String name,
+    required String type,
+    required String description,
+    required String location,
+    required int underratedScore,
+    String? estimatedCost,
+  }) {
+    return PlaceEvent(
+      name: name,
+      type: type,
+      isUnderrated: true,
+      description: description,
+      location: location,
+      underratedScore: underratedScore,
+      estimatedCost: estimatedCost,
+    );
+  }
 }
 
 class JourneyDetailsData {
@@ -69,6 +111,11 @@ class JourneyDetailsData {
       'placesEvents': placesEvents.map((place) => {
         'name': place.name,
         'type': place.type,
+        'isUnderrated': place.isUnderrated,
+        'description': place.description,
+        'location': place.location,
+        'underratedScore': place.underratedScore,
+        'estimatedCost': place.estimatedCost,
       }).toList(),
       'packingChecklist': packingChecklist,
     };
@@ -92,6 +139,11 @@ class JourneyDetailsData {
           .map((item) => PlaceEvent(
                 name: item['name'] as String,
                 type: item['type'] as String,
+                isUnderrated: item['isUnderrated'] as bool? ?? false,
+                description: item['description'] as String?,
+                location: item['location'] as String?,
+                underratedScore: item['underratedScore'] as int?,
+                estimatedCost: item['estimatedCost'] as String?,
               ))
           .toList(),
       packingChecklist: (json['packingChecklist'] as List<dynamic>).cast<String>(),
@@ -109,7 +161,7 @@ class JourneyDetailsData {
       'safety_notes': safetyNotes.join('|'),
       'emergency_medical': emergencyContacts.medical,
       'emergency_police': emergencyContacts.police,
-      'places_events': placesEvents.map((p) => '${p.name}~~${p.type}').join('|'), // Use ~~ as name-type separator
+      'places_events': placesEvents.map((p) => '${p.name}~~${p.type}~~${p.isUnderrated}~~${p.description ?? ''}~~${p.location ?? ''}~~${p.underratedScore ?? ''}~~${p.estimatedCost ?? ''}').join('|'), // Use ~~ as field separator
       'packing_checklist': packingChecklist.join('|'),
     };
   }
@@ -139,6 +191,11 @@ class JourneyDetailsData {
               return PlaceEvent(
                 name: parts.isNotEmpty ? parts[0] : '',
                 type: parts.length > 1 ? parts[1] : '',
+                isUnderrated: parts.length > 2 ? parts[2] == 'true' : false,
+                description: parts.length > 3 && parts[3].isNotEmpty ? parts[3] : null,
+                location: parts.length > 4 && parts[4].isNotEmpty ? parts[4] : null,
+                underratedScore: parts.length > 5 && parts[5].isNotEmpty ? int.tryParse(parts[5]) : null,
+                estimatedCost: parts.length > 6 && parts[6].isNotEmpty ? parts[6] : null,
               );
             }).toList(),
       packingChecklist: (map['packing_checklist'] as String).isEmpty 

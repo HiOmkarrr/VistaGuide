@@ -937,11 +937,20 @@ class _AddJourneyPageState extends State<AddJourneyPage> {
       
       debugPrint('🤖 Starting AI generation for journey: ${journey.title}');
       
-      // Generate with timeout to avoid long waits
+      // Collect all journey locations (source, intermediate stops, destination)
+      final allLocations = <LocationSuggestion>[
+        if (_sourceLocation != null) _sourceLocation!,
+        ..._intermediateStops,
+        if (_destinationLocation != null) _destinationLocation!,
+      ];
+      
+      debugPrint('📍 Journey locations: ${allLocations.map((l) => l.title).join(', ')}');
+      
+      // Generate with timeout to avoid long waits (increased for underrated places)
       journeyDetails = await _journeyDetailsService
-          .generateJourneyDetails(journey)
+          .generateJourneyDetails(journey, locations: allLocations)
           .timeout(
-            const Duration(seconds: 30),
+            const Duration(seconds: 60),
             onTimeout: () {
               debugPrint('⏰ AI generation timed out, using fallback data');
               return null;

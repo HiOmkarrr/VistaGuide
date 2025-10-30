@@ -1,17 +1,26 @@
 import 'package:flutter/foundation.dart';
 import '../../features/journeys/data/models/journey.dart';
 import '../../features/journeys/data/models/journey_details_data.dart';
+import '../../features/journeys/data/models/underrated_place.dart';
 import 'gemini_service.dart';
+import 'underrated_places_service.dart';
+import 'location_autocomplete_service.dart';
 
 /// Service for generating journey-specific details using Gemini AI
 /// Handles prompt creation, API calls, and response parsing for journey data
 class JourneyDetailsGenerationService {
   final GeminiService _geminiService;
+  final UnderratedPlacesService _underratedPlacesService;
 
-  JourneyDetailsGenerationService() : _geminiService = GeminiService();
+  JourneyDetailsGenerationService() 
+      : _geminiService = GeminiService(),
+        _underratedPlacesService = UnderratedPlacesService();
 
   /// Generate journey details for a given journey using Gemini AI
-  Future<JourneyDetailsData?> generateJourneyDetails(Journey journey) async {
+  Future<JourneyDetailsData?> generateJourneyDetails(
+    Journey journey, {
+    List<LocationSuggestion>? locations,
+  }) async {
     if (!_geminiService.isInitialized) {
       debugPrint('❌ Gemini service not initialized, using fallback data');
       return _getFallbackData();
@@ -20,7 +29,17 @@ class JourneyDetailsGenerationService {
     try {
       debugPrint('🎯 Generating journey details for: ${journey.title}');
 
-      final prompt = _createPrompt(journey);
+      // Initialize underrated places service
+      await _underratedPlacesService.initialize();
+      
+      // Find underrated places near journey locations
+      List<UnderratedPlace> underratedPlaces = [];
+      if (locations != null && locations.isNotEmpty) {
+        underratedPlaces = await _findUnderratedPlaces(locations);
+        debugPrint('🌟 Found ${underratedPlaces.length} underrated places near journey locations');
+      }
+
+      final prompt = _createPrompt(journey, underratedPlaces);
       final response = await _geminiService.generateContent(prompt);
 
       if (response == null) {
@@ -28,7 +47,7 @@ class JourneyDetailsGenerationService {
         return _getFallbackData();
       }
 
-      final journeyDetails = _parseResponse(response);
+      final journeyDetails = _parseResponse(response, underratedPlaces);
       if (journeyDetails == null) {
         debugPrint('❌ Failed to parse Gemini response, using fallback data');
         return _getFallbackData();
@@ -42,11 +61,64 @@ class JourneyDetailsGenerationService {
     }
   }
 
+  /// Find underrated places near journey locations
+  Future<List<UnderratedPlace>> _findUnderratedPlaces(
+    List<LocationSuggestion> locations,
+  ) async {
+    try {
+      // Convert LocationSuggestion to LocationPoint
+      final locationPoints = locations
+          .where((loc) => loc.latitude != null && loc.longitude != null)
+          .map((loc) => LocationPoint(
+                latitude: loc.latitude!,
+                longitude: loc.longitude!,
+                name: loc.title,
+              ))
+          .toList();
+
+      if (locationPoints.isEmpty) {
+        debugPrint('⚠️ No valid GPS coordinates found for locations');
+        return [];
+      }
+
+      // Find places along the route (max 3 per location, user-defined radius from preferences)
+      final places = await _underratedPlacesService.findPlacesAlongRoute(
+        locations: locationPoints,
+        // radiusKm will use user's preference from PreferencesService
+        maxPerLocation: 3,
+      );
+
+      return places;
+    } catch (e) {
+      debugPrint('❌ Error finding underrated places: $e');
+      return [];
+    }
+  }
+
   /// Create a structured prompt for Gemini AI
-  String _createPrompt(Journey journey) {
+  String _createPrompt(Journey journey, List<UnderratedPlace> underratedPlaces) {
     final destinations = journey.destinations.join(', ');
     final duration = journey.durationInDays;
     final startMonth = _getMonthName(journey.startDate.month);
+
+    // Build underrated places section
+    final underratedSection = underratedPlaces.isNotEmpty
+        ? '''
+
+🌟 LOCAL HIDDEN GEMS (Underrated Places Near Your Route):
+${underratedPlaces.asMap().entries.map((entry) {
+          final place = entry.value;
+          return '''${entry.key + 1}. ${place.name} (${place.displayLocation})
+   - Category: ${place.category}
+   - Score: ${place.underratedScore}/10
+   - Cost: ${place.estimatedCost}
+   ${place.bestTimeToVisit != null ? '- Best Time: ${place.bestTimeToVisit}' : ''}
+   - ${place.description.substring(0, place.description.length > 150 ? 150 : place.description.length)}...''';
+        }).join('\n\n')}
+
+IMPORTANT: Please integrate these underrated local places into the placesEvents section of your response.
+'''
+        : '';
 
     return '''
 You are a knowledgeable travel planning assistant. Based on the provided trip information, generate practical travel advice in valid JSON format.
@@ -58,7 +130,7 @@ Trip Details:
 - Start Date: ${journey.startDate.day} $startMonth ${journey.startDate.year}
 - Duration: $duration days
 - Season: $startMonth
-
+$underratedSection
 Important: Respond with ONLY a valid JSON object. No additional text, explanations, or markdown formatting.
 
 Required JSON structure:
@@ -84,8 +156,8 @@ Required JSON structure:
   },
   "placesEvents": [
     {
-      "name": "specific place or event name that is going to occur near me",
-      "type": "historical monument|cultural event|market|religious site|natural attraction|museum|festival|etc"
+      "name": "specific place or event name",
+      "type": "historical monument|cultural event|market|religious site|natural attraction|museum|festival|Activity|Food Joint|etc"
     }
   ],
   "packingChecklist": [
@@ -100,7 +172,7 @@ Guidelines:
 - For weather.type: Choose based on destination and season (hot/cool/rainy/snowy)
 - For temperature: Provide realistic range (e.g., "15-25°C", "80-90°F")
 - For emergency contacts: Use actual local emergency numbers for the destination country
-- For places/events: Include 4-8 real, famous attractions/events for the destinations
+- For places/events: Include 4-8 real, famous attractions/events PLUS the underrated local places mentioned above
 - Keep all text concise and practical
 - Focus on actionable, specific advice
 
@@ -108,7 +180,7 @@ Generate the JSON now:''';
   }
 
   /// Parse the Gemini response into JourneyDetailsData
-  JourneyDetailsData? _parseResponse(Map<String, dynamic> response) {
+  JourneyDetailsData? _parseResponse(Map<String, dynamic> response, List<UnderratedPlace> underratedPlaces) {
     try {
       // Validate required fields
       if (!_validateResponseStructure(response)) {
@@ -142,15 +214,31 @@ Generate the JSON now:''';
         police: contactsData['police'] as String,
       );
 
-      // Parse places and events
+      // Parse places and events from Gemini
       final placesData = response['placesEvents'] as List;
       final placesEvents = placesData.map((item) {
         final itemMap = item as Map<String, dynamic>;
-        return PlaceEvent(
+        return PlaceEvent.regular(
           name: itemMap['name'] as String,
           type: itemMap['type'] as String,
         );
       }).toList();
+
+      // Add underrated places (guaranteed inclusion using hybrid approach)
+      final underratedEvents = underratedPlaces.map((place) {
+        return PlaceEvent.underrated(
+          name: place.name,
+          type: place.category,
+          description: place.description,
+          location: place.displayLocation,
+          underratedScore: place.underratedScore,
+          estimatedCost: place.estimatedCost,
+        );
+      }).toList();
+
+      // Combine Gemini suggestions with underrated places
+      // Put underrated places first to give them prominence
+      final allPlacesEvents = [...underratedEvents, ...placesEvents];
 
       // Parse packing checklist
       final packingChecklist = (response['packingChecklist'] as List)
@@ -162,7 +250,7 @@ Generate the JSON now:''';
         whatToBring: whatToBring,
         safetyNotes: safetyNotes,
         emergencyContacts: emergencyContacts,
-        placesEvents: placesEvents,
+        placesEvents: allPlacesEvents,
         packingChecklist: packingChecklist,
       );
     } catch (e) {

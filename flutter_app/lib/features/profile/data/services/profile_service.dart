@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../models/user_profile.dart';
 import '../models/settings_item.dart';
 import '../../../../core/navigation/app_routes.dart';
+import '../../presentation/pages/preferences_page.dart';
 
 /// Service to manage profile data and functionality
 class ProfileService {
@@ -140,7 +141,6 @@ class ProfileService {
   /// Handle settings item tap
   Future<void> handleSettingsItemTap(
       String itemId, BuildContext context) async {
-    // In a real implementation, these would navigate to respective pages
     switch (itemId) {
       case 'personal_info':
         // Navigate to personal information page
@@ -150,6 +150,14 @@ class ProfileService {
         break;
       case 'preferences':
         // Navigate to preferences page
+        if (context.mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const PreferencesPage(),
+            ),
+          );
+        }
         break;
       case 'language':
         // Navigate to language settings page
