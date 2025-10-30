@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:location/location.dart' as loc;
@@ -53,6 +54,7 @@ class HybridLandmarkRecognitionService {
   // When GPS is strong (nearby landmark), it should have significant influence
   static const double alpha = 0.4;  // Visual score weight
   static const double beta = 0.3;   // GPS score weight
+  static const double gamma = 8;   // GPS score hyperparameter
   static const double bonus = 0.3;  // Bonus when both match
   
   // Stricter thresholds for better accuracy
@@ -319,7 +321,7 @@ class HybridLandmarkRecognitionService {
         return {'landmarkId': null, 'gpsScore': 0.0};
       }
 
-      // Calculate GPS score: distance in km / 5
+      // Calculate distance to nearest landmark
       final distanceKm = DistanceCalculator.euclideanDistance(
         lat1: locationData.latitude!,
         lon1: locationData.longitude!,
@@ -327,11 +329,21 @@ class HybridLandmarkRecognitionService {
         lon2: nearestLandmark.longitude,
       );
 
-      final gpsScore = distanceKm / 5.0;
+      // Get user's preferred radius
+      final preferencesService = PreferencesService();
+      final radius = await preferencesService.getLandmarkRecognitionRadius();
+
+      // Calculate GPS score using sigmoid function:
+      // gpsScore = 1 / (1 + e^(gamma * ((distanceKm / radius) - 0.5)))
+      // This gives higher scores for closer landmarks and approaches 0 as distance increases
+      final normalizedDistance = (distanceKm / radius) - 0.5;
+      final exponent = gamma * normalizedDistance;
+      final gpsScore = 1.0 / (1.0 + exp(exponent));
 
       if (kDebugMode) {
         print('📍 GPS Recognition: ${nearestLandmark.landmarkName}');
         print('📏 Distance: ${distanceKm.toStringAsFixed(2)}km');
+        print('📏 Radius: ${radius.toStringAsFixed(2)}km');
         print('📊 GPS Score: ${gpsScore.toStringAsFixed(3)}');
       }
 
