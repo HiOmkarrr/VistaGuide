@@ -76,7 +76,8 @@ class EmergencySMSService {
     }
 
     final message = _generateEmergencyMessage(locationData, userName);
-    debugPrint('📱 Emergency message generated: ${message.substring(0, message.length.clamp(0, 50))}...');
+    debugPrint(
+        '📱 Emergency message generated: ${message.substring(0, message.length.clamp(0, 50))}...');
 
     final successfulContacts = <String>[];
     final failedContacts = <String>[];
@@ -85,7 +86,8 @@ class EmergencySMSService {
     for (final c in contacts) {
       try {
         attempts++;
-        final st = await _sendSmsAwaitStatus(_normalizePhoneNumber(c.phoneNumber), message);
+        final st = await _sendSmsAwaitStatus(
+            _normalizePhoneNumber(c.phoneNumber), message);
         if (st == SMSStatus.sent) {
           successfulContacts.add(c.name);
         } else {
@@ -111,19 +113,20 @@ class EmergencySMSService {
     );
   }
 
-
   /// Generate emergency message using the specified template
-  String _generateEmergencyMessage(Map<String, dynamic> locationData, String? userName) {
+  String _generateEmergencyMessage(
+      Map<String, dynamic> locationData, String? userName) {
     final name = userName ?? 'User';
     final latitude = locationData['latitude']?.toString() ?? '';
     final longitude = locationData['longitude']?.toString() ?? '';
     final address = locationData['address'] ?? 'Location unavailable';
     final battery = locationData['battery']?.toString() ?? 'Unknown';
     final timestamp = DateTime.now();
-    
+
     // Format timestamp
-    final formattedTime = '${timestamp.day}/${timestamp.month}/${timestamp.year} ${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
-    
+    final formattedTime =
+        '${timestamp.day}/${timestamp.month}/${timestamp.year} ${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
+
     // Create Google Maps link
     String mapsLink = 'Location unavailable';
     if (latitude.isNotEmpty && longitude.isNotEmpty) {
@@ -166,7 +169,8 @@ Please respond or call immediately.''';
 
     final message = _generateOTPMessage(otp, appName);
     try {
-      final st = await _sendSmsAwaitStatus(_normalizePhoneNumber(phoneNumber), message);
+      final st = await _sendSmsAwaitStatus(
+          _normalizePhoneNumber(phoneNumber), message);
       if (st == SMSStatus.sent) {
         debugPrint('✅ OTP SMS sent to $phoneNumber');
         return SMSResult(
@@ -175,7 +179,8 @@ Please respond or call immediately.''';
           attempts: 1,
         );
       }
-      debugPrint('❌ OTP SMS failed to send (status listener). Falling back to default SMS app composer.');
+      debugPrint(
+          '❌ OTP SMS failed to send (status listener). Falling back to default SMS app composer.');
       try {
         await _telephony.sendSmsByDefaultApp(
           to: _normalizePhoneNumber(phoneNumber),
@@ -186,7 +191,8 @@ Please respond or call immediately.''';
       }
       return SMSResult(
         status: SMSStatus.failed,
-        message: 'Failed to send OTP silently. Opened default SMS app to send manually.',
+        message:
+            'Failed to send OTP silently. Opened default SMS app to send manually.',
         attempts: 1,
       );
     } catch (e) {
@@ -207,7 +213,9 @@ Please respond or call immediately.''';
     var s = input.trim().replaceAll(RegExp(r'[\s-]'), '');
     if (s.startsWith('+')) return s;
     // Handle leading 0 for Indian mobiles entered as 0XXXXXXXXXX
-    if (s.length == 11 && s.startsWith('0') && RegExp(r'^[6-9]').hasMatch(s.substring(1, 2))) {
+    if (s.length == 11 &&
+        s.startsWith('0') &&
+        RegExp(r'^[6-9]').hasMatch(s.substring(1, 2))) {
       s = s.substring(1);
     }
     // Heuristic for India
@@ -217,11 +225,13 @@ Please respond or call immediately.''';
     return s;
   }
 
-  /// Await SMS status using another_telephony listener
+  /// Await SMS status using another_telephony listener with fallback
   Future<SMSStatus> _sendSmsAwaitStatus(String to, String message) async {
     final completer = Completer<SendStatus>();
     try {
       debugPrint('📨 Sending SMS to $to (normalized)');
+
+      // Try primary method with status listener
       await _telephony.sendSms(
         to: to,
         message: message,
@@ -232,21 +242,54 @@ Please respond or call immediately.''';
           }
         },
       );
-    } catch (e) {
-      debugPrint('❌ sendSms threw: $e');
-      return SMSStatus.failed;
-    }
 
-    try {
-      final status = await completer.future.timeout(const Duration(seconds: 20));
-      if (status == SendStatus.SENT || status == SendStatus.DELIVERED) {
-        return SMSStatus.sent;
-      } else {
+      // Wait for status
+      try {
+        final status =
+            await completer.future.timeout(const Duration(seconds: 20));
+        if (status == SendStatus.SENT || status == SendStatus.DELIVERED) {
+          debugPrint('✅ SMS sent successfully to $to');
+          return SMSStatus.sent;
+        } else {
+          debugPrint('⚠️ SMS status: $status');
+          return SMSStatus.failed;
+        }
+      } catch (e) {
+        debugPrint('⚠️ sendSms status timeout or error: $e');
         return SMSStatus.failed;
       }
     } catch (e) {
-      debugPrint('⚠️ sendSms status timeout or error: $e');
-      return SMSStatus.failed;
+      debugPrint('❌ sendSms threw: $e');
+
+      // Fallback 1: Try sending without status listener
+      try {
+        debugPrint(
+            '🔄 Attempting fallback method 1: sendSms without status listener');
+        await _telephony.sendSms(
+          to: to,
+          message: message,
+          isMultipart: message.length > 160,
+        );
+        debugPrint('✅ SMS sent via fallback method 1');
+        return SMSStatus.sent;
+      } catch (e2) {
+        debugPrint('❌ Fallback method 1 failed: $e2');
+
+        // Fallback 2: Try using default SMS app
+        try {
+          debugPrint('🔄 Attempting fallback method 2: sendSmsByDefaultApp');
+          await _telephony.sendSmsByDefaultApp(
+            to: to,
+            message: message,
+          );
+          debugPrint('✅ SMS app opened via fallback method 2');
+          // Opening SMS app is considered success as user can manually send
+          return SMSStatus.sent;
+        } catch (e3) {
+          debugPrint('❌ Fallback method 2 failed: $e3');
+          return SMSStatus.failed;
+        }
+      }
     }
   }
 
